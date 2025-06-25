@@ -1,0 +1,544 @@
+From 5815339c18c48e5095af95e441374553b5b73220 Mon Sep 17 00:00:00 2001
+From: deltragon <m@dafert.at>
+Date: Tue, 20 May 2025 17:43:04 +0200
+Subject: [PATCH] wayland: implement ext-idle-notify protocol
+
+This implements version 1 of the staging ext-idle-notify wayland
+protocol.
+The functionality is availabe in non-standard form via the
+org.gnome.Mutter.IdleMonitor dbus interface. Since most other
+compositors implement the protocol, this makes it easier for
+applications to support this functionality.
+---
+ src/meson.build                               |   3 +
+ src/tests/meson.build                         |   1 +
+ .../wayland-test-clients/ext-idle-notify.c    | 143 ++++++++++++
+ src/tests/wayland-test-clients/meson.build    |   3 +
+ src/tests/wayland-unit-tests.c                |  26 +++
+ src/wayland/meta-wayland-ext-idle-notify.c    | 211 ++++++++++++++++++
+ src/wayland/meta-wayland-ext-idle-notify.h    |  23 ++
+ src/wayland/meta-wayland-versions.h           |   1 +
+ src/wayland/meta-wayland.c                    |   2 +
+ 9 files changed, 413 insertions(+)
+ create mode 100644 src/tests/wayland-test-clients/ext-idle-notify.c
+ create mode 100644 src/wayland/meta-wayland-ext-idle-notify.c
+ create mode 100644 src/wayland/meta-wayland-ext-idle-notify.h
+
+diff --git a/src/meson.build b/src/meson.build
+index b909bc72bf..54fcb0df4d 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -632,6 +632,8 @@ if have_wayland
+     'wayland/meta-wayland-dma-buf.h',
+     'wayland/meta-wayland-dnd-surface.c',
+     'wayland/meta-wayland-dnd-surface.h',
++    'wayland/meta-wayland-ext-idle-notify.c',
++    'wayland/meta-wayland-ext-idle-notify.h',
+     'wayland/meta-wayland-filter-manager.c',
+     'wayland/meta-wayland-filter-manager.h',
+     'wayland/meta-wayland-fractional-scale.c',
+@@ -1140,6 +1142,7 @@ if have_wayland
+     ['commit-timing', 'staging', 1, ],
+     ['cursor-shape-v1', 'private', ],
+     ['drm-lease', 'staging', 1, ],
++    ['ext-idle-notify', 'staging', 1, ],
+     ['fractional-scale', 'staging', 1, ],
+     ['fifo', 'staging', 1, ],
+     ['gtk-shell', 'private', ],
+diff --git a/src/tests/meson.build b/src/tests/meson.build
+index 8e0dc63c48..d5176fb89a 100644
+--- a/src/tests/meson.build
++++ b/src/tests/meson.build
+@@ -936,6 +936,7 @@ wayland_test_cases = [
+       test_client_executables.get('buffer-transform'),
+       test_client_executables.get('cursor-shape'),
+       test_client_executables.get('dma-buf-scanout'),
++      test_client_executables.get('ext-idle-notify'),
+       test_client_executables.get('fractional-scale'),
+       test_client_executables.get('fullscreen'),
+       test_client_executables.get('idle-inhibit'),
+diff --git a/src/tests/wayland-test-clients/ext-idle-notify.c b/src/tests/wayland-test-clients/ext-idle-notify.c
+new file mode 100644
+index 0000000000..00d8245465
+--- /dev/null
++++ b/src/tests/wayland-test-clients/ext-idle-notify.c
+@@ -0,0 +1,143 @@
++/*
++ * Copyright (C) 2025 Red Hat Inc.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of the
++ * License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, see <http://www.gnu.org/licenses/>.
++ */
++
++#include "config.h"
++
++#include <glib.h>
++#include <wayland-client.h>
++
++#include "wayland-test-client-utils.h"
++
++#include "ext-idle-notify-v1-client-protocol.h"
++
++typedef struct _TestDisplayState
++{
++  struct wl_seat *seat;
++  struct ext_idle_notifier_v1 *idle_notifier;
++} TestDisplayState;
++
++typedef struct _TestIdledState
++{
++  bool received_idled;
++  bool received_resumed;
++} TestIdledState;
++
++static void
++handle_registry_global (void               *user_data,
++                        struct wl_registry *registry,
++                        uint32_t            id,
++                        const char         *interface,
++                        uint32_t            version)
++{
++  WaylandDisplay *display = user_data;
++  TestDisplayState *test_state = display->test_state;
++
++  if (strcmp (interface, "ext_idle_notifier_v1") == 0)
++    {
++      test_state->idle_notifier = wl_registry_bind (registry, id,
++                                        &ext_idle_notifier_v1_interface,
++                                        1);
++    }
++  if (strcmp (interface, "wl_seat") == 0)
++    {
++      test_state->seat = wl_registry_bind (registry, id, &wl_seat_interface, 1);
++    }
++}
++
++static void
++handle_registry_global_remove (void               *user_data,
++                               struct wl_registry *registry,
++                               uint32_t            name)
++{
++}
++
++static const struct wl_registry_listener registry_listener = {
++  handle_registry_global,
++  handle_registry_global_remove
++};
++
++static void
++handle_idled (void                            *user_data,
++              struct ext_idle_notification_v1 *idle_notification)
++{
++  TestIdledState *state = user_data;
++
++  state->received_idled = TRUE;
++}
++
++static void
++handle_resumed (void                            *user_data,
++                struct ext_idle_notification_v1 *idle_notification)
++{
++  TestIdledState *state = user_data;
++
++  state->received_resumed = TRUE;
++}
++
++static struct ext_idle_notification_v1_listener idle_notification_listener = {
++  handle_idled,
++  handle_resumed
++};
++
++int
++main (int    argc,
++      char **argv)
++{
++  g_autoptr (WaylandDisplay) display = NULL;
++  struct wl_registry *registry;
++  TestDisplayState *test_state;
++  TestIdledState state = {};
++
++  struct ext_idle_notification_v1 *notification;
++  uint32_t timeout = 1;
++
++  display = wayland_display_new (WAYLAND_DISPLAY_CAPABILITY_TEST_DRIVER);
++  test_state = g_new0 (TestDisplayState, 1);
++  display->test_state = test_state;
++  display->destroy_test_state = g_free;
++
++  registry = wl_display_get_registry (display->display);
++  wl_registry_add_listener (registry, &registry_listener, display);
++  wl_display_roundtrip (display->display);
++
++  notification =
++    ext_idle_notifier_v1_get_idle_notification (test_state->idle_notifier,
++                                                timeout,
++                                                test_state->seat);
++
++  ext_idle_notification_v1_add_listener (notification, &idle_notification_listener, &state);
++
++  while (!state.received_idled)
++    wayland_display_dispatch (display);
++
++  g_assert_false(state.received_resumed);
++
++  /* this will trigger pointer movement */
++  test_driver_sync_point (display->test_driver, 0, NULL);
++
++  wayland_display_dispatch (display);
++
++  g_assert_true(state.received_resumed);
++
++  test_driver_sync_point (display->test_driver, 1, NULL);
++
++  ext_idle_notification_v1_destroy (notification);
++
++  wl_display_roundtrip (display->display);
++
++  return EXIT_SUCCESS;
++}
+diff --git a/src/tests/wayland-test-clients/meson.build b/src/tests/wayland-test-clients/meson.build
+index 088424bfe9..8867d214ac 100644
+--- a/src/tests/wayland-test-clients/meson.build
++++ b/src/tests/wayland-test-clients/meson.build
+@@ -30,6 +30,9 @@ wayland_test_clients = [
+   {
+     'name': 'drm-lease',
+   },
++  {
++    'name': 'ext-idle-notify',
++  },
+   {
+     'name': 'fractional-scale',
+   },
+diff --git a/src/tests/wayland-unit-tests.c b/src/tests/wayland-unit-tests.c
+index 155f7fcaf7..ea1635c7c6 100644
+--- a/src/tests/wayland-unit-tests.c
++++ b/src/tests/wayland-unit-tests.c
+@@ -1488,6 +1488,30 @@ toplevel_tag (void)
+   meta_wayland_test_client_finish (wayland_test_client);
+ }
+ 
++static void
++ext_idle_notify (void)
++{
++  MetaBackend *backend = meta_context_get_backend (test_context);
++  ClutterSeat *seat = meta_backend_get_default_seat (backend);
++  MetaWaylandTestClient *wayland_test_client;
++
++  virtual_pointer = clutter_seat_create_virtual_device (seat,
++                                                        CLUTTER_POINTER_DEVICE);
++
++  wayland_test_client =
++    meta_wayland_test_client_new (test_context, "ext-idle-notify");
++
++  wait_for_sync_point(0);
++
++  clutter_virtual_input_device_notify_absolute_motion (virtual_pointer,
++                                                       g_get_monotonic_time (),
++                                                       320.0f,
++                                                       240.0f);
++  wait_for_sync_point(1);
++
++  meta_wayland_test_client_finish (wayland_test_client);
++}
++
+ static void
+ on_before_tests (void)
+ {
+@@ -1593,6 +1617,8 @@ init_tests (void)
+                    cursor_shape);
+   g_test_add_func ("/wayland/toplevel/tag",
+                    toplevel_tag);
++  g_test_add_func ("/wayland/ext-idle-notify",
++                   ext_idle_notify);
+ }
+ 
+ int
+diff --git a/src/wayland/meta-wayland-ext-idle-notify.c b/src/wayland/meta-wayland-ext-idle-notify.c
+new file mode 100644
+index 0000000000..e9efb00864
+--- /dev/null
++++ b/src/wayland/meta-wayland-ext-idle-notify.c
+@@ -0,0 +1,211 @@
++/*
++ * Copyright (C) 2025 Red Hat Inc.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of the
++ * License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, see <http://www.gnu.org/licenses/>.
++ *
++ */
++
++#include "config.h"
++
++#include "wayland/meta-wayland-ext-idle-notify.h"
++
++#include "wayland/meta-wayland-versions.h"
++#include "wayland/meta-wayland.h"
++
++#include "meta/meta-idle-monitor.h"
++#include "backends/meta-idle-manager.h"
++#include "backends/meta-backend-private.h"
++
++#include "ext-idle-notify-v1-server-protocol.h"
++
++typedef struct _MetaWaylandExtIdleNotification
++{
++  struct wl_resource      *resource;
++  MetaIdleMonitor *monitor;
++
++  guint watch_id;
++  guint active_watch_id;
++} MetaWaylandExtIdleNotification;
++
++static void
++idle_notifier_destroy (struct wl_client   *client,
++                       struct wl_resource *resource)
++{
++  g_debug ("idle_notifier_destroy");
++  wl_resource_destroy (resource);
++}
++
++static void
++idle_notification_destroy (struct wl_client   *client,
++                           struct wl_resource *resource)
++{
++  g_debug ("idle_notification_destroy");
++  wl_resource_destroy (resource);
++}
++
++static void
++idle_notification_destructor (struct wl_resource *resource)
++{
++  g_debug ("idle_notification_destructor");
++  MetaWaylandExtIdleNotification *idle_notification;
++
++  idle_notification = wl_resource_get_user_data (resource);
++
++  meta_idle_monitor_remove_watch (idle_notification->monitor,
++                                  idle_notification->watch_id);
++  if (idle_notification->active_watch_id != 0)
++    meta_idle_monitor_remove_watch (idle_notification->monitor,
++                                    idle_notification->active_watch_id);
++
++  g_object_unref (idle_notification->monitor);
++
++  g_free (idle_notification);
++}
++
++static void
++idle_watch_removed (gpointer data)
++{
++  //MetaWaylandExtIdleNotification *idle_notification = data;
++
++  // this means that the monitor was removed, i guess??
++  //g_object_unref (idle_notification->monitor);
++}
++
++static void
++active_watch_removed (gpointer data)
++{
++  MetaWaylandExtIdleNotification *idle_notification = data;
++
++  // this should just happen normally, when the active watch has fired,
++  // it gets removed
++  // don't think we need to do anything
++  idle_notification->active_watch_id = 0;
++}
++
++static void
++notify_active (MetaIdleMonitor *monitor,
++                       guint            watch_id,
++                       gpointer         user_data)
++{
++  MetaWaylandExtIdleNotification *idle_notification = user_data;
++
++  ext_idle_notification_v1_send_resumed (idle_notification->resource);
++}
++
++static void
++notify_idle (MetaIdleMonitor *monitor,
++                     guint            watch_id,
++                     gpointer         user_data)
++{
++  MetaWaylandExtIdleNotification *idle_notification = user_data;
++
++  ext_idle_notification_v1_send_idled (idle_notification->resource);
++
++  idle_notification->active_watch_id =
++    meta_idle_monitor_add_user_active_watch (idle_notification->monitor,
++                                             notify_active,
++                                             idle_notification,
++                                             active_watch_removed);
++}
++
++
++static const struct ext_idle_notification_v1_interface idle_notification_implementation =
++{
++  idle_notification_destroy,
++};
++
++static void
++get_idle_notification (struct wl_client   *client,
++                       struct wl_resource *resource,
++                       uint32_t            id,
++                       uint32_t            timeout,
++                       struct wl_resource *seat_resource)
++{
++  MetaWaylandCompositor *compositor =
++    META_WAYLAND_COMPOSITOR (wl_resource_get_user_data (resource));
++  MetaContext *context = meta_wayland_compositor_get_context (compositor);
++  MetaBackend *backend = meta_context_get_backend (context);
++
++  //MetaWaylandSeat *seat = wl_resource_get_user_data (seat_resource);
++  // seat->clutter_seat ClutterSeat
++  // we could try to get the seat-specific idle_manager for multi-seat support?
++  // Plasma does the same though, and just ignores the seat...
++
++  MetaIdleManager *idle_manager;
++  MetaIdleMonitor *idle_monitor;
++
++  MetaWaylandExtIdleNotification *idle_notification;
++  struct wl_resource *idle_notification_resource;
++
++  idle_manager = meta_backend_get_idle_manager (backend);
++  idle_monitor = meta_idle_manager_get_core_monitor (idle_manager);
++
++  idle_notification_resource =
++    wl_resource_create (client,
++                        &ext_idle_notification_v1_interface,
++                        META_ZWP_KEYBOARD_SHORTCUTS_INHIBIT_V1_VERSION,
++                        id);
++
++  idle_notification = g_new0 (MetaWaylandExtIdleNotification, 1);
++  idle_notification->resource = idle_notification_resource;
++
++  idle_notification->watch_id =
++    meta_idle_monitor_add_idle_watch (idle_monitor, timeout,
++                                      notify_idle,
++                                      idle_notification, idle_watch_removed);
++  idle_notification->monitor = g_object_ref (idle_monitor);
++
++  wl_resource_set_implementation (idle_notification_resource,
++                                  &idle_notification_implementation,
++                                  idle_notification,
++                                  idle_notification_destructor);
++}
++
++static const struct ext_idle_notifier_v1_interface idle_notifier_implementation =
++{
++  idle_notifier_destroy,
++  get_idle_notification
++};
++
++static void
++idle_notifier_bind (struct wl_client *client,
++                    void             *user_data,
++                    uint32_t          version,
++                    uint32_t          id)
++{
++  MetaWaylandCompositor *compositor = user_data;
++  struct wl_resource *resource;
++
++  resource = wl_resource_create (client,
++                                 &ext_idle_notifier_v1_interface,
++                                 version, id);
++  wl_resource_set_implementation (resource,
++                                  &idle_notifier_implementation,
++                                  compositor, NULL);
++}
++
++void
++meta_wayland_init_ext_idle_notify (MetaWaylandCompositor *compositor)
++{
++  g_debug ("init idle notify");
++  struct wl_display *wl_display =
++    meta_wayland_compositor_get_wayland_display (compositor);
++
++  if (!wl_global_create (wl_display,
++                         &ext_idle_notifier_v1_interface,
++                         META_EXT_IDLE_NOTIFY_V1_VERSION,
++                         compositor,
++                         idle_notifier_bind))
++    g_error ("Failed to create ext_idle_notifier_v1 global");
++}
+diff --git a/src/wayland/meta-wayland-ext-idle-notify.h b/src/wayland/meta-wayland-ext-idle-notify.h
+new file mode 100644
+index 0000000000..2656ade85a
+--- /dev/null
++++ b/src/wayland/meta-wayland-ext-idle-notify.h
+@@ -0,0 +1,23 @@
++/*
++ * Copyright (C) 2025 Red Hat Inc.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of the
++ * License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, see <http://www.gnu.org/licenses/>.
++ *
++ */
++
++#pragma once
++
++#include "wayland/meta-wayland-types.h"
++
++void meta_wayland_init_ext_idle_notify (MetaWaylandCompositor *compositor);
+diff --git a/src/wayland/meta-wayland-versions.h b/src/wayland/meta-wayland-versions.h
+index 13c6000d13..9077aa2913 100644
+--- a/src/wayland/meta-wayland-versions.h
++++ b/src/wayland/meta-wayland-versions.h
+@@ -67,3 +67,4 @@
+ #define META_WP_FIFO_V1_VERSION 1
+ #define META_WP_CURSOR_SHAPE_VERSION 2
+ #define META_XDG_TOPLEVEL_TAG_V1_VERSION 1
++#define META_EXT_IDLE_NOTIFY_V1_VERSION 1
+diff --git a/src/wayland/meta-wayland.c b/src/wayland/meta-wayland.c
+index 9bd2daf602..ef78e31cc6 100644
+--- a/src/wayland/meta-wayland.c
++++ b/src/wayland/meta-wayland.c
+@@ -46,6 +46,7 @@
+ #include "wayland/meta-wayland-data-device.h"
+ #include "wayland/meta-wayland-dma-buf.h"
+ #include "wayland/meta-wayland-egl-stream.h"
++#include "wayland/meta-wayland-ext-idle-notify.h"
+ #include "wayland/meta-wayland-filter-manager.h"
+ #include "wayland/meta-wayland-idle-inhibit.h"
+ #include "wayland/meta-wayland-inhibit-shortcuts-dialog.h"
+@@ -1000,6 +1001,7 @@ meta_wayland_compositor_new (MetaContext *context)
+   meta_wayland_commit_timing_init (compositor);
+   meta_wayland_fifo_init (compositor);
+   meta_wayland_init_cursor_shape (compositor);
++  meta_wayland_init_ext_idle_notify (compositor);
+ 
+ #ifdef HAVE_WAYLAND_EGLSTREAM
+   {
+-- 
+GitLab
+
