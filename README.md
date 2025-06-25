@@ -1,3 +1,7 @@
+# Note
+
+This is a synchronized fork of the Gnome Mutter wayland compositor.  This project supports and includes missing wayland protocols that Red Hat developers and Gnome don't want to support in their compositor.  This project aims to provide a mutter implementation that supports necessary and crucial wayland services and capabilities to allow end users to have a screensaver on gnome.  If you are a developer and want a missing wayland protocol implemented in mutter, please help us get mutter up to acceptable standards for wayland support and submit a patch or pull request.
+
 # Mutter
 
 Mutter is a Wayland display server and X11 window manager and compositor library.
