@@ -426,6 +426,9 @@ shm_buffer_attach (MetaWaylandBuffer  *buffer,
       return FALSE;
     }
 
+  g_clear_pointer (&buffer->shm.buffer, wl_shm_buffer_unref);
+  buffer->shm.buffer = wl_shm_buffer_ref (shm_buffer);
+
   cogl_format = format_info->cogl_format;
   multi_format = format_info->multi_texture_format;
 
@@ -706,8 +709,6 @@ meta_wayland_buffer_create_snippet (MetaWaylandBuffer *buffer)
 void
 meta_wayland_buffer_inc_use_count (MetaWaylandBuffer *buffer)
 {
-  g_warn_if_fail (buffer->resource);
-
   buffer->use_count++;
 }
 
@@ -791,7 +792,7 @@ process_shm_buffer_damage (MetaWaylandBuffer *buffer,
 
   n_rectangles = mtk_region_num_rectangles (region);
 
-  shm_buffer = wl_shm_buffer_get (buffer->resource);
+  shm_buffer = buffer->shm.buffer;
   stride = wl_shm_buffer_get_stride (shm_buffer);
   height = wl_shm_buffer_get_height (shm_buffer);
   shm_format = wl_shm_buffer_get_format (shm_buffer);
@@ -863,8 +864,6 @@ meta_wayland_buffer_process_damage (MetaWaylandBuffer *buffer,
   gboolean res = FALSE;
   GError *error = NULL;
 
-  g_return_if_fail (buffer->resource);
-
   switch (buffer->type)
     {
     case META_WAYLAND_BUFFER_TYPE_SHM:
@@ -913,6 +912,9 @@ try_acquire_egl_image_scanout (MetaWaylandBuffer     *buffer,
   g_autoptr (MetaDrmBufferGbm) fb = NULL;
   g_autoptr (CoglScanout) scanout = NULL;
   g_autoptr (GError) error = NULL;
+
+  if (!buffer->resource)
+    return NULL;
 
   gpu_kms = meta_renderer_native_get_primary_gpu (renderer_native);
   device_file = meta_renderer_native_get_primary_device_file (renderer_native);
@@ -1047,6 +1049,7 @@ meta_wayland_buffer_finalize (GObject *object)
   g_clear_pointer (&buffer->single_pixel.single_pixel_buffer,
                    meta_wayland_single_pixel_buffer_free);
   g_clear_object (&buffer->single_pixel.texture);
+  g_clear_pointer (&buffer->shm.buffer, wl_shm_buffer_unref);
 
   G_OBJECT_CLASS (meta_wayland_buffer_parent_class)->finalize (object);
 }

@@ -39,6 +39,7 @@
 #include "core/meta-context-private.h"
 #include "wayland/meta-wayland-activation.h"
 #include "wayland/meta-wayland-buffer.h"
+#include "wayland/meta-wayland-client-private.h"
 #include "wayland/meta-wayland-color-management.h"
 #include "wayland/meta-wayland-color-representation.h"
 #include "wayland/meta-wayland-commit-timing.h"
@@ -48,6 +49,7 @@
 #include "wayland/meta-wayland-dma-buf.h"
 #include "wayland/meta-wayland-egl-stream.h"
 #include "wayland/meta-wayland-filter-manager.h"
+#include "wayland/meta-wayland-fixes.h"
 #include "wayland/meta-wayland-idle-inhibit.h"
 #include "wayland/meta-wayland-inhibit-shortcuts-dialog.h"
 #include "wayland/meta-wayland-inhibit-shortcuts.h"
@@ -792,8 +794,10 @@ on_client_created (struct wl_listener *listener,
   struct wl_client *client = user_data;
   MetaWaylandCompositor *compositor =
     wl_container_of (listener, compositor, client_created_listener);
+  MetaContext *context = meta_wayland_compositor_get_context (compositor);
+  g_autoptr (MetaWaylandClient) wayland_client = NULL;
 
-  wl_client_set_user_data (client, compositor, NULL);
+  wayland_client = meta_wayland_client_new_from_wl (context, client);
 }
 
 void
@@ -1031,6 +1035,7 @@ meta_wayland_compositor_new (MetaContext *context)
   meta_wayland_fifo_init (compositor);
   meta_wayland_init_cursor_shape (compositor);
   meta_wayland_init_color_representation (compositor);
+  meta_wayland_init_fixes (compositor);
 
 #ifdef HAVE_WAYLAND_EGLSTREAM
   {

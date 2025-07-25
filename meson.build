@@ -1,5 +1,5 @@
 project('mutter', 'c',
-  version: '49.alpha.0',
+  version: '49.alpha.1',
   meson_version: '>= 1.5.0',
   license: 'GPL-2.0-or-later',
 )
@@ -7,7 +7,7 @@ project('mutter', 'c',
 split_version = meson.project_version().split('.')
 
 # API version, bump each development cycle
-libmutter_api_version = '16'
+libmutter_api_version = '17'
 
 mutter_srcdir = meson.current_source_dir()
 mutter_builddir = meson.current_build_dir()
@@ -47,7 +47,7 @@ gudev_req = '>= 238'
 umockdev_req = '>= 0.3.0'
 
 # wayland version requirements
-wayland_server_req = '>= 1.23'
+wayland_server_req = '>= 1.24'
 wayland_protocols_req = '>= 1.44'
 
 # native backend version requirements

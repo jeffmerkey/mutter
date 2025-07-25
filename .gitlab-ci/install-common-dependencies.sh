@@ -121,7 +121,15 @@ then
     ./$SCRIPTS_DIR/install-meson-project.sh \
       "${OPTIONS[@]}" \
       https://gitlab.gnome.org/GNOME/gjs.git \
-      master
+      1.85.1
+fi
+
+if ! pkgconf --atleast-version 1.24 wayland-server
+then
+    ./$SCRIPTS_DIR/install-meson-project.sh \
+      "${OPTIONS[@]}" \
+      https://gitlab.freedesktop.org/wayland/wayland.git \
+      1.24.0
 fi
 
 if ! pkgconf --atleast-version 1.44 wayland-protocols
@@ -137,5 +145,13 @@ then
     ./$SCRIPTS_DIR/install-meson-project.sh \
       "${OPTIONS[@]}" \
       https://gitlab.gnome.org/GNOME/glib.git \
+      main
+fi
+
+if ! check_gsettings_key org.gnome.desktop.screensaver restart-enabled
+then
+    ./$SCRIPTS_DIR/install-meson-project.sh \
+      "${OPTIONS[@]}" \
+      https://gitlab.gnome.org/GNOME/gsettings-desktop-schemas.git \
       main
 fi
