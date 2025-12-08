@@ -53,6 +53,9 @@ struct _MetaSessionStateClass
 
   void (* remove_window) (MetaSessionState *state,
                           const char       *name);
+
+  gboolean (* has_window) (MetaSessionState *state,
+                           const char       *name);
 };
 
 const char * meta_session_state_get_name (MetaSessionState *state);
@@ -74,3 +77,6 @@ gboolean meta_session_state_restore_window (MetaSessionState *state,
 
 void meta_session_state_remove_window (MetaSessionState *state,
                                        const char       *name);
+
+gboolean meta_session_state_has_window (MetaSessionState *state,
+                                        const char       *name);

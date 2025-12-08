@@ -99,6 +99,13 @@ meta_session_state_remove_window (MetaSessionState *state,
   META_SESSION_STATE_GET_CLASS (state)->remove_window (state, name);
 }
 
+gboolean
+meta_session_state_has_window (MetaSessionState *state,
+                               const char       *name)
+{
+  return META_SESSION_STATE_GET_CLASS (state)->has_window (state, name);
+}
+
 static void
 meta_session_state_set_property (GObject      *object,
                                  guint         prop_id,
