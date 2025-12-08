@@ -21,7 +21,7 @@
 
 #include "wayland-test-client-utils.h"
 
-#include "session-management-v1-client-protocol.h"
+#include "xdg-session-management-v1-client-protocol.h"
 
 
 typedef enum _TestState
@@ -33,7 +33,7 @@ typedef enum _TestState
 
 typedef struct _TestDisplayState
 {
-  struct xx_session_manager_v1 *session_manager;
+  struct xdg_session_manager_v1 *session_manager;
   TestState state;
 } TestDisplayState;
 
@@ -47,10 +47,10 @@ handle_registry_global (void               *user_data,
   WaylandDisplay *display = user_data;
   TestDisplayState *test_state = display->test_state;
 
-  if (strcmp (interface, "xx_session_manager_v1") == 0)
+  if (strcmp (interface, "xdg_session_manager_v1") == 0)
     {
       test_state->session_manager =
-        wl_registry_bind (registry, id, &xx_session_manager_v1_interface, 1);
+        wl_registry_bind (registry, id, &xdg_session_manager_v1_interface, 1);
     }
 }
 
@@ -81,9 +81,9 @@ typedef struct
 } ToplevelSessionState;
 
 static void
-test_create_created (void                 *user_data,
-                     struct xx_session_v1 *xdg_session_v1,
-                     const char           *id)
+test_create_created (void                  *user_data,
+                     struct xdg_session_v1 *xdg_session_v1,
+                     const char            *id)
 {
   TestCreateState *state = user_data;
 
@@ -92,8 +92,8 @@ test_create_created (void                 *user_data,
 }
 
 static void
-test_create_restored (void                 *user_data,
-                      struct xx_session_v1 *xdg_session_v1)
+test_create_restored (void                  *user_data,
+                      struct xdg_session_v1 *xdg_session_v1)
 {
   TestCreateState *state = user_data;
 
@@ -101,31 +101,30 @@ test_create_restored (void                 *user_data,
 }
 
 static void
-test_create_replaced (void                 *user_data,
-                      struct xx_session_v1 *xdg_session_v1)
+test_create_replaced (void                  *user_data,
+                      struct xdg_session_v1 *xdg_session_v1)
 {
   TestCreateState *state = user_data;
 
   state->received_replaced = TRUE;
 }
 
-static struct xx_session_v1_listener test_create_session_listener = {
+static struct xdg_session_v1_listener test_create_session_listener = {
   test_create_created,
   test_create_restored,
   test_create_replaced,
 };
 
 static void
-toplevel_restored (void                          *user_data,
-                   struct xx_toplevel_session_v1 *toplevel_session,
-                   struct xdg_toplevel           *toplevel)
+toplevel_restored (void                           *user_data,
+                   struct xdg_toplevel_session_v1 *toplevel_session)
 {
   ToplevelSessionState *toplevel_state = user_data;
 
   toplevel_state->restored = TRUE;
 }
 
-static struct xx_toplevel_session_v1_listener toplevel_session_listener = {
+static struct xdg_toplevel_session_v1_listener toplevel_session_listener = {
   toplevel_restored,
 };
 
@@ -144,8 +143,8 @@ main (int    argc,
   struct wl_registry *registry1, *registry2;
   TestDisplayState *test_state1, *test_state2;
   g_autoptr (WaylandSurface) toplevel1 = NULL, toplevel2 = NULL;
-  struct xx_session_v1 *session1, *session2;
-  struct xx_toplevel_session_v1 *toplevel_session1, *toplevel_session2;
+  struct xdg_session_v1 *session1, *session2;
+  struct xdg_toplevel_session_v1 *toplevel_session1, *toplevel_session2;
   TestCreateState state1 = {};
   TestCreateState state2 = {};
   ToplevelSessionState toplevel_state1 = {};
@@ -169,22 +168,22 @@ main (int    argc,
                     &toplevel_state1);
 
   session1 =
-    xx_session_manager_v1_get_session (test_state1->session_manager,
-                                       XX_SESSION_MANAGER_V1_REASON_LAUNCH,
-                                       NULL);
-  xx_session_v1_add_listener (session1, &test_create_session_listener, &state1);
+    xdg_session_manager_v1_get_session (test_state1->session_manager,
+                                        XDG_SESSION_MANAGER_V1_REASON_LAUNCH,
+                                        NULL);
+  xdg_session_v1_add_listener (session1, &test_create_session_listener, &state1);
 
   while (!state1.received_created)
     wayland_display_dispatch (display1);
   g_assert_nonnull (state1.id);
 
   /* Test add before committing initial state. */
-  toplevel_session1 = xx_session_v1_add_toplevel (session1,
-                                                  toplevel1->xdg_toplevel,
-                                                  "toplevel");
-  xx_toplevel_session_v1_add_listener (toplevel_session1,
-                                       &toplevel_session_listener,
-                                       &toplevel_state1);
+  toplevel_session1 = xdg_session_v1_add_toplevel (session1,
+                                                   toplevel1->xdg_toplevel,
+                                                   "toplevel");
+  xdg_toplevel_session_v1_add_listener (toplevel_session1,
+                                        &toplevel_session_listener,
+                                        &toplevel_state1);
   wl_surface_commit (toplevel1->wl_surface);
 
   while (!toplevel_state1.configured)
@@ -209,21 +208,21 @@ main (int    argc,
                     &toplevel_state2);
 
   session2 =
-    xx_session_manager_v1_get_session (test_state2->session_manager,
-                                       XX_SESSION_MANAGER_V1_REASON_LAUNCH,
-                                       state1.id);
-  xx_session_v1_add_listener (session2, &test_create_session_listener, &state2);
+    xdg_session_manager_v1_get_session (test_state2->session_manager,
+                                        XDG_SESSION_MANAGER_V1_REASON_LAUNCH,
+                                        state1.id);
+  xdg_session_v1_add_listener (session2, &test_create_session_listener, &state2);
 
   while (!state2.received_restored)
     wayland_display_dispatch (display2);
 
   /* Test add before committing initial state. */
-  toplevel_session2 = xx_session_v1_restore_toplevel (session2,
-                                                      toplevel2->xdg_toplevel,
-                                                      "toplevel");
-  xx_toplevel_session_v1_add_listener (toplevel_session2,
-                                       &toplevel_session_listener,
-                                       &toplevel_state2);
+  toplevel_session2 = xdg_session_v1_restore_toplevel (session2,
+                                                       toplevel2->xdg_toplevel,
+                                                       "toplevel");
+  xdg_toplevel_session_v1_add_listener (toplevel_session2,
+                                        &toplevel_session_listener,
+                                        &toplevel_state2);
   wl_surface_commit (toplevel2->wl_surface);
 
   while (!toplevel_state2.configured)

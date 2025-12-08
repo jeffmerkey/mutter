@@ -25,7 +25,7 @@
 #include "wayland/meta-wayland-xdg-session-state.h"
 #include "wayland/meta-wayland-xdg-shell.h"
 
-#include "session-management-v1-server-protocol.h"
+#include "xdg-session-management-v1-server-protocol.h"
 
 
 typedef struct _MetaWaylandXdgToplevelSession
@@ -54,6 +54,7 @@ struct _MetaWaylandXdgSession
 {
   GObject parent;
 
+  MetaWaylandXdgSessionState *xdg_session_state;
   char *id;
   struct wl_resource *resource;
   GHashTable *toplevels; /* name -> MetaWaylandXdgToplevelSession */
@@ -103,26 +104,8 @@ xdg_toplevel_session_destroy (struct wl_client   *wl_client,
   wl_resource_destroy (resource);
 }
 
-static void
-xdg_toplevel_session_remove (struct wl_client   *wl_client,
-                             struct wl_resource *resource)
-{
-  MetaWaylandXdgToplevelSession *toplevel_session =
-    wl_resource_get_user_data (resource);
-  MetaWaylandXdgSession *session = toplevel_session->session;
-
-  if (session)
-    {
-      g_signal_emit (session, signals[REMOVE_TOPLEVEL], 0, toplevel_session->name);
-      g_hash_table_remove (session->toplevels, toplevel_session->name);
-    }
-
-  wl_resource_destroy (resource);
-}
-
-static const struct xx_toplevel_session_v1_interface meta_xdg_toplevel_session_interface = {
+static const struct xdg_toplevel_session_v1_interface meta_xdg_toplevel_session_interface = {
   xdg_toplevel_session_destroy,
-  xdg_toplevel_session_remove,
 };
 
 static void
@@ -151,7 +134,7 @@ meta_wayland_xdg_toplevel_session_new (MetaWaylandXdgSession *xdg_session,
   toplevel_session->name = g_strdup (name);
   toplevel_session->resource =
     wl_resource_create (wl_client,
-                        &xx_toplevel_session_v1_interface,
+                        &xdg_toplevel_session_v1_interface,
                         version, id);
   wl_resource_set_implementation (toplevel_session->resource,
                                   &meta_xdg_toplevel_session_interface,
@@ -164,13 +147,7 @@ meta_wayland_xdg_toplevel_session_new (MetaWaylandXdgSession *xdg_session,
 static void
 meta_wayland_xdg_toplevel_session_emit_restored (MetaWaylandXdgToplevelSession *toplevel_session)
 {
-  MetaWaylandXdgToplevel *xdg_toplevel =
-    META_WAYLAND_XDG_TOPLEVEL (toplevel_session->surface->role);
-  struct wl_resource *xdg_toplevel_resource =
-    meta_wayland_xdg_toplevel_get_resource (xdg_toplevel);
-
-  xx_toplevel_session_v1_send_restored (toplevel_session->resource,
-                                        xdg_toplevel_resource);
+  xdg_toplevel_session_v1_send_restored (toplevel_session->resource);
 }
 
 static void
@@ -178,6 +155,7 @@ meta_wayland_xdg_session_dispose (GObject *object)
 {
   MetaWaylandXdgSession *session = META_WAYLAND_XDG_SESSION (object);
 
+  g_clear_object (&session->xdg_session_state);
   g_clear_pointer (&session->id, g_free);
   g_clear_pointer (&session->toplevels, g_hash_table_unref);
 
@@ -292,10 +270,11 @@ xdg_session_add_toplevel (struct wl_client   *wl_client,
   MetaWaylandXdgToplevelSession *toplevel_session;
   MetaWindow *window;
 
-  if (g_hash_table_lookup (session->toplevels, name))
+  if (meta_session_state_has_window (META_SESSION_STATE (session->xdg_session_state),
+                                     name))
     {
-      wl_resource_post_error (resource, XX_SESSION_V1_ERROR_NAME_IN_USE,
-                              "Name of toplevel was already in use");
+      wl_resource_post_error (resource, XDG_SESSION_V1_ERROR_NAME_IN_USE,
+                              "Name of toplevel is already in use");
       return;
     }
 
@@ -335,7 +314,7 @@ xdg_session_restore_toplevel (struct wl_client   *wl_client,
 
   if (g_hash_table_lookup (session->toplevels, name))
     {
-      wl_resource_post_error (resource, XX_SESSION_V1_ERROR_NAME_IN_USE,
+      wl_resource_post_error (resource, XDG_SESSION_V1_ERROR_NAME_IN_USE,
                               "Name of toplevel was already in use");
       return;
     }
@@ -344,7 +323,7 @@ xdg_session_restore_toplevel (struct wl_client   *wl_client,
   surface = meta_wayland_surface_role_get_surface (surface_role);
   if (meta_wayland_surface_has_initial_commit (surface))
     {
-      wl_resource_post_error (resource, XX_SESSION_V1_ERROR_ALREADY_MAPPED,
+      wl_resource_post_error (resource, XDG_SESSION_V1_ERROR_ALREADY_MAPPED,
                               "Tried to restore an already mapped toplevel");
       return;
     }
@@ -371,11 +350,27 @@ xdg_session_restore_toplevel (struct wl_client   *wl_client,
     meta_wayland_xdg_toplevel_session_emit_restored (toplevel_session);
 }
 
-static const struct xx_session_v1_interface meta_xdg_session_interface = {
+static void
+xdg_session_remove_toplevel (struct wl_client   *wl_client,
+                             struct wl_resource *resource,
+                             const char         *name)
+{
+  MetaWaylandXdgSession *session =
+    META_WAYLAND_XDG_SESSION (wl_resource_get_user_data (resource));
+
+  if (g_hash_table_contains (session->toplevels, name))
+    {
+      g_signal_emit (session, signals[REMOVE_TOPLEVEL], 0, name);
+      g_hash_table_remove (session->toplevels, name);
+    }
+}
+
+static const struct xdg_session_v1_interface meta_xdg_session_interface = {
   xdg_session_destroy,
   xdg_session_remove,
   xdg_session_add_toplevel,
   xdg_session_restore_toplevel,
+  xdg_session_remove_toplevel,
 };
 
 static void
@@ -408,6 +403,7 @@ meta_wayland_xdg_session_new (MetaWaylandXdgSessionState *session_state,
   g_autoptr (MetaWaylandXdgSession) session = NULL;
 
   session = g_object_new (META_TYPE_WAYLAND_XDG_SESSION, NULL);
+  g_set_object (&session->xdg_session_state, session_state);
   session->id =
     g_strdup (meta_session_state_get_name (META_SESSION_STATE (session_state)));
   session->toplevels =
@@ -415,7 +411,7 @@ meta_wayland_xdg_session_new (MetaWaylandXdgSessionState *session_state,
                            g_free,
                            (GDestroyNotify) meta_wayland_xdg_toplevel_session_unref);
   session->resource = wl_resource_create (wl_client,
-                                          &xx_session_v1_interface,
+                                          &xdg_session_v1_interface,
                                           version, id);
   wl_resource_set_implementation (session->resource,
                                   &meta_xdg_session_interface,
@@ -434,19 +430,19 @@ meta_wayland_xdg_session_get_id (MetaWaylandXdgSession *session)
 void
 meta_wayland_xdg_session_emit_created (MetaWaylandXdgSession *session)
 {
-  xx_session_v1_send_created (session->resource, session->id);
+  xdg_session_v1_send_created (session->resource, session->id);
 }
 
 void
 meta_wayland_xdg_session_emit_replaced (MetaWaylandXdgSession *session)
 {
-  xx_session_v1_send_replaced (session->resource);
+  xdg_session_v1_send_replaced (session->resource);
 }
 
 void
 meta_wayland_xdg_session_emit_restored (MetaWaylandXdgSession *session)
 {
-  xx_session_v1_send_restored (session->resource);
+  xdg_session_v1_send_restored (session->resource);
 }
 
 gboolean

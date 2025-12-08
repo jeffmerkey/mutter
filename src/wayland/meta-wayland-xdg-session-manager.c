@@ -28,7 +28,7 @@
 #include "core/meta-debug-control-private.h"
 #include "core/meta-session-manager.h"
 
-#include "session-management-v1-server-protocol.h"
+#include "xdg-session-management-v1-server-protocol.h"
 
 #define TIMEOUT_DELAY_SECONDS 3
 
@@ -254,7 +254,7 @@ xdg_session_manager_get_session (struct wl_client   *client,
           if (meta_wayland_xdg_session_is_same_client (prev_session, client))
             {
               wl_resource_post_error (resource,
-                                      XX_SESSION_MANAGER_V1_ERROR_IN_USE,
+                                      XDG_SESSION_MANAGER_V1_ERROR_IN_USE,
                                       "Session %s already in use",
                                       session_id);
               return;
@@ -314,7 +314,7 @@ xdg_session_manager_get_session (struct wl_client   *client,
                        g_steal_pointer (&session_state));
 }
 
-static const struct xx_session_manager_v1_interface meta_xdg_session_manager_interface = {
+static const struct xdg_session_manager_v1_interface meta_xdg_session_manager_interface = {
   xdg_session_manager_destroy,
   xdg_session_manager_get_session,
 };
@@ -328,7 +328,7 @@ bind_session_manager (struct wl_client *client,
   MetaWaylandXdgSessionManager *session_manager = data;
   struct wl_resource *resource;
 
-  resource = wl_resource_create (client, &xx_session_manager_v1_interface,
+  resource = wl_resource_create (client, &xdg_session_manager_v1_interface,
                                  version, id);
   wl_resource_set_implementation (resource, &meta_xdg_session_manager_interface,
                                   session_manager, NULL);
@@ -354,7 +354,7 @@ update_enabled (MetaWaylandXdgSessionManager *session_manager)
 
       session_manager->global =
         wl_global_create (wayland_display,
-                          &xx_session_manager_v1_interface,
+                          &xdg_session_manager_v1_interface,
                           META_XDG_SESSION_MANAGER_V1_VERSION,
                           session_manager, bind_session_manager);
       if (!session_manager->global)

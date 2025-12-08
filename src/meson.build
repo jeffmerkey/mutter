@@ -1043,7 +1043,6 @@ wayland_protocols = [
   ['presentation-time', 'stable', ],
   ['primary-selection', 'unstable', 1, ],
   ['relative-pointer', 'unstable', 1, ],
-  ['session-management-v1', 'private', ],
   ['single-pixel-buffer', 'staging', 1, ],
   ['tablet', 'stable', 2, ],
   ['text-input', 'unstable', 3, ],
@@ -1063,6 +1062,16 @@ if have_xwayland
   wayland_protocols += [
     ['mutter-x11-interop', 'private', ],
     ['xwayland-keyboard-grab', 'unstable', 1, ],
+  ]
+endif
+
+if wayland_protocols_dep.version().version_compare('>=1.48')
+  wayland_protocols += [
+    ['xdg-session-management', 'staging', 1, ],
+  ]
+else
+  wayland_protocols += [
+    ['xdg-session-management-v1', 'private', 1, ],
   ]
 endif
 
