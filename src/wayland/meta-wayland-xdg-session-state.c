@@ -496,6 +496,16 @@ meta_wayland_xdg_session_state_remove_window (MetaSessionState *state,
   g_hash_table_remove (xdg_session_state->toplevels, name);
 }
 
+static gboolean
+meta_wayland_xdg_session_state_has_window (MetaSessionState *state,
+                                           const char       *name)
+{
+  MetaWaylandXdgSessionState *xdg_session_state =
+    META_WAYLAND_XDG_SESSION_STATE (state);
+
+  return g_hash_table_contains (xdg_session_state->toplevels, name);
+}
+
 static void
 meta_wayland_xdg_session_state_class_init (MetaWaylandXdgSessionStateClass *klass)
 {
@@ -511,6 +521,8 @@ meta_wayland_xdg_session_state_class_init (MetaWaylandXdgSessionStateClass *klas
     meta_wayland_xdg_session_state_restore_window;
   session_state_class->remove_window =
     meta_wayland_xdg_session_state_remove_window;
+  session_state_class->has_window =
+    meta_wayland_xdg_session_state_has_window;
 }
 
 static void
