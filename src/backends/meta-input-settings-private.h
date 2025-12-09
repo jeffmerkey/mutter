@@ -84,6 +84,9 @@ struct _MetaInputSettingsClass
   void (* set_disable_while_typing) (MetaInputSettings  *settings,
                                      ClutterInputDevice *device,
                                      gboolean            enabled);
+  void (* set_disable_while_typing_timeout) (MetaInputSettings  *settings,
+                                             ClutterInputDevice *device,
+                                             uint32_t            millis);
   void (* set_invert_scroll) (MetaInputSettings  *settings,
                               ClutterInputDevice *device,
                               gboolean            inverted);

@@ -273,6 +273,22 @@ meta_input_settings_native_set_disable_while_typing (MetaInputSettings  *setting
 }
 
 static void
+meta_input_settings_native_set_disable_while_typing_timeout (MetaInputSettings  *settings,
+                                                             ClutterInputDevice *device,
+                                                             uint32_t            millis)
+{
+  struct libinput_device *libinput_device;
+
+  libinput_device = meta_input_device_native_get_libinput_device (device);
+
+  if (!libinput_device)
+    return;
+
+  if (libinput_device_config_dwt_is_available (libinput_device))
+    libinput_device_config_dwt_set_timeout (libinput_device, millis);
+}
+
+static void
 meta_input_settings_native_set_invert_scroll (MetaInputSettings  *settings,
                                               ClutterInputDevice *device,
                                               gboolean            inverted)
@@ -836,6 +852,7 @@ meta_input_settings_native_class_init (MetaInputSettingsNativeClass *klass)
   input_settings_class->set_click_method = meta_input_settings_native_set_click_method;
   input_settings_class->set_keyboard_repeat = meta_input_settings_native_set_keyboard_repeat;
   input_settings_class->set_disable_while_typing = meta_input_settings_native_set_disable_while_typing;
+  input_settings_class->set_disable_while_typing_timeout = meta_input_settings_native_set_disable_while_typing_timeout;
 
   input_settings_class->set_tablet_mapping = meta_input_settings_native_set_tablet_mapping;
   input_settings_class->set_tablet_aspect_ratio = meta_input_settings_native_set_tablet_aspect_ratio;

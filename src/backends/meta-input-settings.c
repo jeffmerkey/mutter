@@ -573,7 +573,9 @@ update_touchpad_disable_while_typing (MetaInputSettings  *input_settings,
   MetaInputSettingsClass *input_settings_class;
   MetaInputSettingsPrivate *priv;
   gboolean enabled;
-  const gchar *key = "disable-while-typing";
+  uint32_t timeout_ms;
+  const char *key_dwt = "disable-while-typing";
+  const char *key_timeout = "disable-while-typing-timeout";
 
   if (device &&
       !device_matches_capabilities (device,
@@ -583,13 +585,17 @@ update_touchpad_disable_while_typing (MetaInputSettings  *input_settings,
 
   priv = meta_input_settings_get_instance_private (input_settings);
   input_settings_class = META_INPUT_SETTINGS_GET_CLASS (input_settings);
-  enabled = g_settings_get_boolean (priv->touchpad_settings, key);
+  enabled = g_settings_get_boolean (priv->touchpad_settings, key_dwt);
+  timeout_ms = g_settings_get_uint (priv->touchpad_settings, key_timeout);
 
   if (device)
-   {
+    {
       settings_device_set_bool_setting (input_settings, device,
                                         input_settings_class->set_disable_while_typing,
                                         enabled);
+      settings_device_set_uint_setting (input_settings, device,
+                                        input_settings_class->set_disable_while_typing_timeout,
+                                        timeout_ms);
     }
   else
     {
@@ -599,6 +605,11 @@ update_touchpad_disable_while_typing (MetaInputSettings  *input_settings,
                                  NULL,
                                  input_settings_class->set_disable_while_typing,
                                  enabled);
+      settings_set_uint_setting (input_settings,
+                                 CLUTTER_INPUT_CAPABILITY_TOUCHPAD,
+                                 CLUTTER_INPUT_CAPABILITY_NONE,
+                                 input_settings_class->set_disable_while_typing_timeout,
+                                 timeout_ms);
     }
 }
 
@@ -1212,7 +1223,8 @@ meta_input_settings_changed_cb (GSettings  *settings,
         update_touchpad_tap_and_drag_enabled (input_settings, NULL);
       else if (strcmp (key, "tap-and-drag-lock") == 0)
         update_touchpad_tap_and_drag_lock_enabled (input_settings, NULL);
-      else if (strcmp (key, "disable-while-typing") == 0)
+      else if (strcmp (key, "disable-while-typing") == 0 ||
+               strcmp (key, "disable-while-typing-timeout") == 0)
         update_touchpad_disable_while_typing (input_settings, NULL);
       else if (strcmp (key, "send-events") == 0)
         update_touchpad_send_events (input_settings, NULL);
