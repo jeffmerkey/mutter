@@ -58,6 +58,7 @@
 #include "clutter/clutter-debug.h"
 #include "clutter/clutter-enum-types.h"
 #include "clutter/clutter-keysyms.h"
+#include "clutter/clutter-key-controller.h"
 #include "clutter/clutter-main.h"
 #include "clutter/clutter-marshal.h"
 #include "clutter/clutter-private.h"
@@ -185,6 +186,7 @@ typedef struct _ClutterTextPrivate
 
   ClutterAction *pan_gesture;
   ClutterAction *click_gesture;
+  ClutterAction *key_controller;
 
   ClutterInputFocus *input_focus;
   ClutterInputContentHintFlags input_hints;
@@ -2396,109 +2398,6 @@ clutter_text_remove_password_hint (gpointer data)
   clutter_actor_queue_redraw (data); // paint volume was already invalidated by clutter_text_dirty_cache()
 }
 
-static gboolean
-clutter_text_key_press (ClutterActor *actor,
-                        ClutterEvent *event)
-{
-  ClutterText *self = CLUTTER_TEXT (actor);
-  ClutterTextPrivate *priv = clutter_text_get_instance_private (self);
-  ClutterBindingPool *pool;
-  ClutterEventFlags flags;
-  ClutterModifierType modifiers;
-  uint32_t keyval;
-  gboolean res;
-
-  if (!priv->editable)
-    return CLUTTER_EVENT_PROPAGATE;
-
-  /* we need to use the ClutterText type name to find our own
-   * key bindings; subclasses will override or chain up this
-   * event handler, so they can do whatever they want there
-   */
-  pool = clutter_binding_pool_find (g_type_name (CLUTTER_TYPE_TEXT));
-  g_assert (pool != NULL);
-
-  flags = clutter_event_get_flags (event);
-  keyval = clutter_event_get_key_symbol (event);
-  modifiers = clutter_event_get_state (event);
-
-  if (!(flags & CLUTTER_EVENT_FLAG_INPUT_METHOD) &&
-      clutter_input_focus_is_focused (priv->input_focus) &&
-      clutter_input_focus_filter_event (priv->input_focus, event))
-    return CLUTTER_EVENT_STOP;
-
-  /* we allow passing synthetic events that only contain
-   * the Unicode value and not the key symbol, unless they
-   * contain the input method flag.
-   */
-  if (keyval == 0 && (flags & CLUTTER_EVENT_FLAG_SYNTHETIC) &&
-      !(flags & CLUTTER_EVENT_FLAG_INPUT_METHOD))
-    res = FALSE;
-  else
-    res = clutter_binding_pool_activate (pool, keyval,
-                                         modifiers,
-                                         G_OBJECT (actor));
-
-  /* if the key binding has handled the event we bail out
-   * as fast as we can; otherwise, we try to insert the
-   * Unicode character inside the key event into the text
-   * actor
-   */
-  if (res)
-    return CLUTTER_EVENT_STOP;
-  else if ((modifiers & CLUTTER_CONTROL_MASK) == 0)
-    {
-      gunichar key_unichar;
-
-      /* Skip keys when control is pressed */
-      key_unichar = clutter_event_get_key_unicode (event);
-
-      /* return is reported as CR, but we want LF */
-      if (key_unichar == '\r')
-        key_unichar = '\n';
-
-      if ((key_unichar == '\n' && !priv->single_line_mode) ||
-          (g_unichar_validate (key_unichar) &&
-           !g_unichar_iscntrl (key_unichar)))
-        {
-          /* truncate the eventual selection so that the
-           * Unicode character can replace it
-           */
-          clutter_text_delete_selection (self);
-          clutter_text_insert_unichar (self, key_unichar);
-
-          if (priv->show_password_hint)
-            {
-              g_clear_handle_id (&priv->password_hint_id, g_source_remove);
-
-              priv->password_hint_visible = TRUE;
-              priv->password_hint_id =
-                g_timeout_add_once (priv->password_hint_timeout,
-                                    clutter_text_remove_password_hint,
-                                    self);
-            }
-
-          return CLUTTER_EVENT_STOP;
-        }
-    }
-
-  return CLUTTER_EVENT_PROPAGATE;
-}
-
-static gboolean
-clutter_text_key_release (ClutterActor *actor,
-                          ClutterEvent *event)
-{
-  ClutterText *self = CLUTTER_TEXT (actor);
-  ClutterTextPrivate *priv = clutter_text_get_instance_private (self);
-
-  if (clutter_input_focus_is_focused (priv->input_focus) &&
-      clutter_input_focus_filter_event (priv->input_focus, event))
-    return CLUTTER_EVENT_STOP;
-
-  return CLUTTER_EVENT_PROPAGATE;
-}
-
 static void
 clutter_text_compute_layout_offsets (ClutterText           *self,
                                      PangoLayout           *layout,
@@ -3053,34 +2952,6 @@ clutter_text_resource_scale_changed (ClutterActor *actor)
   clutter_text_dirty_cache (text);
 
   clutter_actor_queue_immediate_relayout (actor);
-}
-
-static gboolean
-clutter_text_event (ClutterActor *self,
-                    ClutterEvent *event)
-{
-  ClutterText *text = CLUTTER_TEXT (self);
-  ClutterTextPrivate *priv = clutter_text_get_instance_private (text);
-  ClutterEventType event_type;
-
-  event_type = clutter_event_type (event);
-
-  if ((priv->editable || priv->selectable) &&
-      event_type == CLUTTER_BUTTON_PRESS &&
-      clutter_input_focus_is_focused (priv->input_focus))
-    {
-      clutter_input_focus_filter_event (priv->input_focus, event);
-    }
-
-  if (clutter_input_focus_is_focused (priv->input_focus) &&
-      (event_type == CLUTTER_IM_COMMIT ||
-       event_type == CLUTTER_IM_DELETE ||
-       event_type == CLUTTER_IM_PREEDIT))
-    {
-      return clutter_input_focus_process_event (priv->input_focus, event);
-    }
-
-  return CLUTTER_EVENT_PROPAGATE;
 }
 
 static void
@@ -3802,14 +3673,11 @@ clutter_text_class_init (ClutterTextClass *klass)
   actor_class->get_preferred_width = clutter_text_get_preferred_width;
   actor_class->get_preferred_height = clutter_text_get_preferred_height;
   actor_class->allocate = clutter_text_allocate;
-  actor_class->key_press_event = clutter_text_key_press;
-  actor_class->key_release_event = clutter_text_key_release;
   actor_class->key_focus_in = clutter_text_key_focus_in;
   actor_class->key_focus_out = clutter_text_key_focus_out;
   actor_class->has_overlaps = clutter_text_has_overlaps;
   actor_class->calculate_resource_scale = clutter_text_calculate_resource_scale;
   actor_class->resource_scale_changed = clutter_text_resource_scale_changed;
-  actor_class->event = clutter_text_event;
 
   /**
    * ClutterText:buffer:
@@ -4506,6 +4374,60 @@ on_pan_update (ClutterPanGesture *gesture,
     clutter_text_set_positions (self, offset, offset);
 }
 
+static gboolean
+on_key_controller_key_pressed (ClutterKeyController *key_controller,
+                               ClutterText          *self)
+{
+  ClutterTextPrivate *priv = clutter_text_get_instance_private (self);
+  ClutterModifierType modifiers;
+  gunichar key_unichar;
+  uint32_t keyval;
+
+  if (!priv->editable)
+    return CLUTTER_EVENT_PROPAGATE;
+
+  clutter_key_controller_get_key (key_controller,
+                                  &keyval,
+                                  NULL,
+                                  &key_unichar);
+  clutter_key_controller_get_state (key_controller, &modifiers, NULL, NULL);
+
+  /* Skip keys when control is pressed */
+  if ((modifiers & CLUTTER_CONTROL_MASK) != 0)
+    return CLUTTER_EVENT_PROPAGATE;
+
+  /* return is reported as CR, but we want LF */
+  if (key_unichar == '\r')
+    key_unichar = '\n';
+
+  /* In single-line mode, newlines are ignored */
+  if (key_unichar == '\n' && priv->single_line_mode)
+    return CLUTTER_EVENT_PROPAGATE;
+
+  /* Only insert valid, non-control characters */
+  if (!g_unichar_validate (key_unichar) || g_unichar_iscntrl (key_unichar))
+    return CLUTTER_EVENT_PROPAGATE;
+
+  /* truncate the eventual selection so that the
+   * Unicode character can replace it
+   */
+  clutter_text_delete_selection (self);
+  clutter_text_insert_unichar (self, key_unichar);
+
+  if (priv->show_password_hint)
+    {
+      g_clear_handle_id (&priv->password_hint_id, g_source_remove);
+
+      priv->password_hint_visible = TRUE;
+      priv->password_hint_id =
+        g_timeout_add_once (priv->password_hint_timeout,
+                            clutter_text_remove_password_hint,
+                            self);
+    }
+
+  return CLUTTER_EVENT_STOP;
+}
+
 static void
 clutter_text_init (ClutterText *self)
 {
@@ -4587,6 +4509,15 @@ clutter_text_init (ClutterText *self)
 
   clutter_gesture_can_not_cancel (CLUTTER_GESTURE (priv->click_gesture),
                                   CLUTTER_GESTURE (priv->pan_gesture));
+
+  priv->key_controller = clutter_key_controller_new (priv->input_focus);
+  clutter_key_controller_set_trigger_keybindings (CLUTTER_KEY_CONTROLLER (priv->key_controller),
+                                                  TRUE);
+  g_signal_connect (priv->key_controller,
+                    "key-press", G_CALLBACK (on_key_controller_key_pressed),
+                    self);
+
+  clutter_actor_add_action (CLUTTER_ACTOR (self), priv->key_controller);
 }
 
 /**
