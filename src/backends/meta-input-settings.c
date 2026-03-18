@@ -946,48 +946,85 @@ update_touchpad_send_events (MetaInputSettings  *input_settings,
 }
 
 static void
-update_trackball_scroll_button (MetaInputSettings  *input_settings,
-                                ClutterInputDevice *device)
+update_scroll_button (MetaInputSettings        *input_settings,
+                      GSettings                *settings,
+                      ClutterInputDevice       *device,
+                      ClutterInputCapabilities  require_capabilities,
+                      ClutterInputCapabilities  reject_capabilities)
 {
   MetaInputSettingsClass *input_settings_class;
   MetaInputSettingsPrivate *priv;
   guint button;
   gboolean button_lock;
-  ClutterInputCapabilities caps;
 
   priv = meta_input_settings_get_instance_private (input_settings);
   input_settings_class = META_INPUT_SETTINGS_GET_CLASS (input_settings);
 
   if (device)
     {
-      caps = clutter_input_device_get_capabilities (device);
-
-      if ((caps & CLUTTER_INPUT_CAPABILITY_TRACKBALL) == 0)
+      if (!device_matches_capabilities (device,
+                                        require_capabilities,
+                                        reject_capabilities))
         return;
     }
 
   /* This key is 'i' in the schema but it also specifies a minimum
    * range of 0 so the cast here is safe. */
-  button = (guint) g_settings_get_int (priv->trackball_settings, "scroll-wheel-emulation-button");
-  button_lock = g_settings_get_boolean (priv->trackball_settings, "scroll-wheel-emulation-button-lock");
+  button = (guint) g_settings_get_int (settings, "scroll-wheel-emulation-button");
+  button_lock = g_settings_get_boolean (settings, "scroll-wheel-emulation-button-lock");
 
   if (device)
     {
       input_settings_class->set_scroll_button (input_settings, device, button, button_lock);
     }
-  else if (!device)
+  else
     {
       GList *l;
 
       for (l = priv->devices; l; l = l->next)
         {
           device = l->data;
-          caps = clutter_input_device_get_capabilities (device);
 
-          if ((caps & CLUTTER_INPUT_CAPABILITY_TRACKBALL) != 0)
+          if (device_matches_capabilities (device,
+                                           require_capabilities,
+                                           reject_capabilities))
             input_settings_class->set_scroll_button (input_settings, device, button, button_lock);
         }
     }
+}
+
+static void
+update_mouse_scroll_button (MetaInputSettings  *input_settings,
+                            ClutterInputDevice *device)
+{
+  MetaInputSettingsPrivate *priv;
+
+  priv = meta_input_settings_get_instance_private (input_settings);
+
+  update_scroll_button (input_settings,
+                        priv->mouse_settings,
+                        device,
+                        CLUTTER_INPUT_CAPABILITY_POINTER,
+                        CLUTTER_INPUT_CAPABILITY_TOUCHPAD |
+                        CLUTTER_INPUT_CAPABILITY_TRACKBALL |
+                        CLUTTER_INPUT_CAPABILITY_TRACKPOINT);
+}
+
+static void
+update_trackball_scroll_button (MetaInputSettings  *input_settings,
+                                ClutterInputDevice *device)
+{
+  MetaInputSettingsPrivate *priv;
+
+  priv = meta_input_settings_get_instance_private (input_settings);
+
+  update_scroll_button (input_settings,
+                        priv->trackball_settings,
+                        device,
+                        CLUTTER_INPUT_CAPABILITY_POINTER |
+                        CLUTTER_INPUT_CAPABILITY_TRACKBALL,
+                        CLUTTER_INPUT_CAPABILITY_TOUCHPAD |
+                        CLUTTER_INPUT_CAPABILITY_TRACKPOINT);
 }
 
 static void
@@ -1204,6 +1241,9 @@ meta_input_settings_changed_cb (GSettings  *settings,
         update_pointer_accel_profile (input_settings, settings, NULL);
       else if (strcmp (key, "middle-click-emulation") == 0)
         update_middle_click_emulation (input_settings, settings, NULL);
+      else if (strcmp (key, "scroll-wheel-emulation-button") == 0 ||
+               strcmp (key, "scroll-wheel-emulation-button-lock") == 0)
+        update_mouse_scroll_button (input_settings, NULL);
     }
   else if (settings == priv->touchpad_settings)
     {
@@ -1538,6 +1578,7 @@ apply_device_settings (MetaInputSettings  *input_settings,
                                 priv->touchpad_settings,
                                 device);
 
+  update_mouse_scroll_button (input_settings, device);
   update_trackball_scroll_button (input_settings, device);
   update_pointer_accel_profile (input_settings,
                                 priv->trackball_settings,
