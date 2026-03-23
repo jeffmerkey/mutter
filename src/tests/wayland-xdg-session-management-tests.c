@@ -648,7 +648,5 @@ int
 main (int   argc,
       char *argv[])
 {
-  g_setenv ("MUTTER_DEBUG_SESSION_MANAGEMENT_PROTOCOL", "1", TRUE);
-
   meta_run_wayland_tests (argc, argv, init_tests);
 }

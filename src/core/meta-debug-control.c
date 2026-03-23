@@ -169,7 +169,6 @@ meta_debug_control_init (MetaDebugControl *debug_control)
   MetaDBusDebugControl *dbus_debug_control =
     META_DBUS_DEBUG_CONTROL (debug_control);
   gboolean force_hdr, force_linear_blending;
-  gboolean session_management_protocol;
   gboolean inhibit_hw_cursor;
   gboolean a11y_manager_without_access_control;
 
@@ -180,11 +179,6 @@ meta_debug_control_init (MetaDebugControl *debug_control)
     g_strcmp0 (getenv ("MUTTER_DEBUG_FORCE_LINEAR_BLENDING"), "1") == 0;
   meta_dbus_debug_control_set_force_linear_blending (dbus_debug_control,
                                                      force_linear_blending);
-
-  session_management_protocol =
-    g_strcmp0 (getenv ("MUTTER_DEBUG_SESSION_MANAGEMENT_PROTOCOL"), "1") == 0;
-  meta_dbus_debug_control_set_session_management_protocol (dbus_debug_control,
-                                                           session_management_protocol);
 
   inhibit_hw_cursor =
     g_strcmp0 (getenv ("MUTTER_DEBUG_INHIBIT_HW_CURSOR"), "1") == 0;
@@ -213,15 +207,6 @@ meta_debug_control_is_hdr_forced (MetaDebugControl *debug_control)
     META_DBUS_DEBUG_CONTROL (debug_control);
 
   return meta_dbus_debug_control_get_force_hdr (dbus_debug_control);
-}
-
-gboolean
-meta_debug_control_is_session_management_protocol_enabled (MetaDebugControl *debug_control)
-{
-  MetaDBusDebugControl *dbus_debug_control =
-    META_DBUS_DEBUG_CONTROL (debug_control);
-
-  return meta_dbus_debug_control_get_session_management_protocol (dbus_debug_control);
 }
 
 void

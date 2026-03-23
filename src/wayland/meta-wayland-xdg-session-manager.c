@@ -334,38 +334,6 @@ bind_session_manager (struct wl_client *client,
                                   session_manager, NULL);
 }
 
-static void
-update_enabled (MetaWaylandXdgSessionManager *session_manager)
-{
-  MetaWaylandCompositor *compositor = session_manager->compositor;
-  MetaDebugControl *debug_control =
-    meta_context_get_debug_control (compositor->context);
-  gboolean is_enabled;
-
-  is_enabled =
-    meta_debug_control_is_session_management_protocol_enabled (debug_control);
-
-  if (is_enabled && !session_manager->global)
-    {
-      struct wl_display *wayland_display;
-
-      wayland_display =
-        meta_wayland_compositor_get_wayland_display (compositor);
-
-      session_manager->global =
-        wl_global_create (wayland_display,
-                          &xdg_session_manager_v1_interface,
-                          META_XDG_SESSION_MANAGER_V1_VERSION,
-                          session_manager, bind_session_manager);
-      if (!session_manager->global)
-        g_error ("Could not create session manager global");
-    }
-  else if (!is_enabled)
-    {
-      g_clear_pointer (&session_manager->global, wl_global_destroy);
-    }
-}
-
 static MetaWaylandXdgSessionManager *
 meta_wayland_session_manager_new (MetaWaylandCompositor *compositor)
 {
@@ -393,41 +361,28 @@ meta_wayland_session_manager_free (MetaWaylandXdgSessionManager *session_manager
   g_free (session_manager);
 }
 
-static void
-on_protocol_enabled_changed (GObject    *object,
-                             GParamSpec *pspec,
-                             gpointer    user_data)
-{
-  MetaWaylandXdgSessionManager *session_manager = user_data;
-
-  update_enabled (session_manager);
-}
-
 void
 meta_wayland_xdg_session_management_init (MetaWaylandCompositor *compositor)
 {
-  MetaDebugControl *debug_control =
-    meta_context_get_debug_control (compositor->context);
+  struct wl_display *wayland_display;
 
   compositor->session_manager = meta_wayland_session_manager_new (compositor);
 
-  g_signal_connect (debug_control, "notify::session-management-protocol",
-                    G_CALLBACK (on_protocol_enabled_changed),
-                    compositor->session_manager);
+  wayland_display =
+    meta_wayland_compositor_get_wayland_display (compositor);
 
-  update_enabled (compositor->session_manager);
+  compositor->session_manager->global =
+    wl_global_create (wayland_display,
+                      &xdg_session_manager_v1_interface,
+                      META_XDG_SESSION_MANAGER_V1_VERSION,
+                      compositor->session_manager, bind_session_manager);
+  if (!compositor->session_manager->global)
+    g_error ("Could not create session manager global");
 }
 
 void
 meta_wayland_xdg_session_management_finalize (MetaWaylandCompositor *compositor)
 {
-  MetaDebugControl *debug_control =
-    meta_context_get_debug_control (compositor->context);
-
-  g_signal_handlers_disconnect_by_func (debug_control,
-                                        on_protocol_enabled_changed,
-                                        compositor->session_manager);
-
   g_clear_pointer (&compositor->session_manager,
                    meta_wayland_session_manager_free);
 }
