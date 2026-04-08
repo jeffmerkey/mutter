@@ -564,20 +564,16 @@ drop_x11_windows (MetaDisplay      *display,
 
   g_array_unref (tracker->verified_stack);
   tracker->verified_stack = new_stack;
-  l = tracker->unverified_predictions->head;
 
-  while (l)
+  for (l = tracker->unverified_predictions->head; l; l = l->next)
     {
       MetaStackOp *op = l->data;
-      GList *next = l->next;
 
       if (META_STACK_ID_IS_X11 (op->any.window))
         {
           g_queue_remove (tracker->unverified_predictions, op);
           meta_stack_op_free (op);
         }
-
-      l = next;
     }
 }
 #endif /* HAVE_XWAYLAND */
@@ -704,10 +700,11 @@ meta_stack_tracker_free (MetaStackTracker *tracker)
 {
   if (tracker->sync_stack_later)
     {
-      MetaCompositor *compositor =
-        meta_display_get_compositor (tracker->display);
-      MetaLaters *laters = meta_compositor_get_laters (compositor);
+      MetaCompositor *compositor;
+      MetaLaters *laters;
 
+      compositor = meta_display_get_compositor (tracker->display);
+      laters = meta_compositor_get_laters (compositor);
       meta_laters_remove (laters, tracker->sync_stack_later);
     }
 
@@ -1108,8 +1105,7 @@ meta_stack_tracker_sync_stack (MetaStackTracker *tracker)
                                        meta_display_lookup_stamp (tracker->display, window));
     }
 
-  meta_compositor_sync_stack (tracker->display->compositor,
-                              meta_windows);
+  meta_compositor_sync_stack (tracker->display->compositor, meta_windows);
   g_list_free (meta_windows);
 
   meta_display_restacked (tracker->display);
