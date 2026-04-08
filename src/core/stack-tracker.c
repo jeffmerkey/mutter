@@ -192,8 +192,8 @@ get_window_desc (MetaStackTracker *tracker,
 static void
 meta_stack_op_dump (MetaStackTracker *tracker,
                     MetaStackOp      *op,
-		    const char       *prefix,
-		    const char       *suffix)
+                    const char       *prefix,
+                    const char       *suffix)
 {
 #ifdef WITH_VERBOSE_MODE
   const char *window_desc = get_window_desc (tracker, op->any.window);
@@ -203,11 +203,11 @@ meta_stack_op_dump (MetaStackTracker *tracker,
     {
     case STACK_OP_ADD:
       meta_topic (META_DEBUG_STACK, "%sADD(%s; %ld)%s",
-		  prefix, window_desc, op->any.serial, suffix);
+                  prefix, window_desc, op->any.serial, suffix);
       break;
     case STACK_OP_REMOVE:
       meta_topic (META_DEBUG_STACK, "%sREMOVE(%s; %ld)%s",
-		  prefix, window_desc, op->any.serial, suffix);
+                  prefix, window_desc, op->any.serial, suffix);
       break;
     case STACK_OP_RAISE_ABOVE:
       {
@@ -744,7 +744,7 @@ meta_stack_tracker_free (MetaStackTracker *tracker)
 
 static void
 stack_tracker_apply_prediction (MetaStackTracker *tracker,
-			        MetaStackOp      *op)
+                                MetaStackOp      *op)
 {
   gboolean free_at_end = FALSE;
 
@@ -779,7 +779,7 @@ stack_tracker_apply_prediction (MetaStackTracker *tracker,
 void
 meta_stack_tracker_record_add (MetaStackTracker *tracker,
                                guint64           window,
-			       gulong            serial)
+                               gulong            serial)
 {
   MetaStackOp *op = g_new0 (MetaStackOp, 1);
 
@@ -793,7 +793,7 @@ meta_stack_tracker_record_add (MetaStackTracker *tracker,
 void
 meta_stack_tracker_record_remove (MetaStackTracker *tracker,
                                   guint64           window,
-				  gulong            serial)
+                                  gulong            serial)
 {
   MetaStackOp *op = g_new0 (MetaStackOp, 1);
 
@@ -808,7 +808,7 @@ static void
 meta_stack_tracker_record_raise_above (MetaStackTracker *tracker,
                                        guint64           window,
                                        guint64           sibling,
-				       gulong            serial)
+                                       gulong            serial)
 {
   MetaStackOp *op = g_new0 (MetaStackOp, 1);
 
@@ -824,7 +824,7 @@ static void
 meta_stack_tracker_record_lower_below (MetaStackTracker *tracker,
                                        guint64           window,
                                        guint64           sibling,
-				       gulong            serial)
+                                       gulong            serial)
 {
   MetaStackOp *op = g_new0 (MetaStackOp, 1);
 
@@ -839,7 +839,7 @@ meta_stack_tracker_record_lower_below (MetaStackTracker *tracker,
 #ifdef HAVE_XWAYLAND
 static void
 stack_tracker_event_received (MetaStackTracker *tracker,
-			      MetaStackOp      *op)
+                              MetaStackOp      *op)
 {
   gboolean need_sync = FALSE;
 
@@ -860,7 +860,7 @@ stack_tracker_event_received (MetaStackTracker *tracker,
       MetaStackOp *queued_op  = tracker->unverified_predictions->head->data;
 
       if (queued_op->any.serial >= op->any.serial)
-	break;
+        break;
 
       meta_stack_op_apply (tracker, queued_op, tracker->verified_stack,
                            NO_RESTACK_X_WINDOWS);
@@ -888,7 +888,7 @@ stack_tracker_event_received (MetaStackTracker *tracker,
       MetaStackOp *queued_op  = tracker->unverified_predictions->head->data;
 
       if (queued_op->any.serial > op->any.serial)
-	break;
+        break;
 
       meta_stack_op_apply (tracker, queued_op, tracker->verified_stack,
                            NO_RESTACK_X_WINDOWS);
@@ -914,7 +914,7 @@ stack_tracker_event_received (MetaStackTracker *tracker,
 
 void
 meta_stack_tracker_create_event (MetaStackTracker    *tracker,
-				 XCreateWindowEvent  *event)
+                                 XCreateWindowEvent  *event)
 {
   MetaStackOp op;
 
@@ -927,7 +927,7 @@ meta_stack_tracker_create_event (MetaStackTracker    *tracker,
 
 void
 meta_stack_tracker_destroy_event (MetaStackTracker    *tracker,
-				  XDestroyWindowEvent *event)
+                                  XDestroyWindowEvent *event)
 {
   MetaStackOp op;
 
@@ -940,7 +940,7 @@ meta_stack_tracker_destroy_event (MetaStackTracker    *tracker,
 
 void
 meta_stack_tracker_reparent_event (MetaStackTracker    *tracker,
-				   XReparentEvent      *event)
+                                   XReparentEvent      *event)
 {
   if (event->parent == event->event)
     {
@@ -966,7 +966,7 @@ meta_stack_tracker_reparent_event (MetaStackTracker    *tracker,
 
 void
 meta_stack_tracker_configure_event (MetaStackTracker    *tracker,
-				    XConfigureEvent     *event)
+                                    XConfigureEvent     *event)
 {
   MetaStackOp op;
 
@@ -1015,7 +1015,7 @@ meta_stack_tracker_is_guard_window (MetaStackTracker *tracker,
 void
 meta_stack_tracker_get_stack (MetaStackTracker *tracker,
                               guint64         **windows,
-			      int              *n_windows)
+                              int              *n_windows)
 {
   GArray *stack;
 
