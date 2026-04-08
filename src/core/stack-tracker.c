@@ -1340,84 +1340,121 @@ meta_stack_tracker_restack_managed (MetaStackTracker *tracker,
 {
   guint64 *windows;
   int n_windows;
-  int old_pos, new_pos;
+  int windows_pos, managed_pos;
 
   COGL_TRACE_BEGIN_SCOPED (StackTrackerRestackManaged,
                            "Meta::StackTracker::restack_managed()");
   if (n_managed == 0)
     return;
 
+  /* NB: Windows are ordered from bottom to top in the stacks,
+   * but restacked from top to bottom.
+   */
+
   COGL_TRACE_BEGIN_SCOPED (StackTrackerRestackManagedGet,
                            "Meta::StackTracker::restack_managed#get()");
   meta_stack_tracker_get_stack (tracker, &windows, &n_windows);
 
+  windows_pos = n_windows - 1;
+  managed_pos = n_managed - 1;
+
   /* If the top window has to be restacked, we don't want to move it to the very
    * top of the stack, since apps expect override-redirect windows to stay near
-   * the top of the X stack; we instead move it above all managed windows (or
-   * above the guard window if there are no non-hidden managed windows.)
+   * the top of the X stack; we instead move it above all managed windows (and
+   * the guard window).
    */
-  old_pos = n_windows - 1;
-  for (old_pos = n_windows - 1; old_pos >= 0; old_pos--)
+  for (; windows_pos >= 0; windows_pos--)
     {
-      MetaWindow *old_window = meta_display_lookup_stack_id (tracker->display, windows[old_pos]);
-      if ((old_window && !old_window->override_redirect && !old_window->unmanaging) ||
-          meta_stack_tracker_is_guard_window (tracker, windows[old_pos]))
+      MetaWindow *window;
+
+      window = meta_display_lookup_stack_id (tracker->display, windows[windows_pos]);
+      if ((window && !window->override_redirect && !window->unmanaging) ||
+          meta_stack_tracker_is_guard_window (tracker, windows[windows_pos]))
         break;
     }
-  g_assert (old_pos >= 0);
+
+  g_assert (windows_pos >= 0);
   COGL_TRACE_END (StackTrackerRestackManagedGet);
 
   COGL_TRACE_BEGIN_SCOPED (StackTrackerRestackManagedRaise,
                            "Meta::StackTracker::restack_managed#raise()");
-  new_pos = n_managed - 1;
-  if (managed[new_pos] != windows[old_pos])
+  if (managed[managed_pos] != windows[windows_pos])
     {
-      /* Move the first managed window in the new stack above all managed windows */
-      meta_stack_tracker_raise_above (tracker, managed[new_pos], windows[old_pos]);
+      /* Move the first managed window in the new stack above all managed
+       * windows (and the guard window).
+       *
+       * Moving `managed[managed_pos]` above `windows[windows_pos]` moves the
+       * window at windows_pos down one position. We'll examine it again later
+       * to see if it matches the next managed window.
+       */
+      meta_stack_tracker_raise_above (tracker,
+                                      managed[managed_pos],
+                                      windows[windows_pos]);
       meta_stack_tracker_get_stack (tracker, &windows, &n_windows);
-      /* Moving managed[new_pos] above windows[old_pos], moves the window at old_pos down by one */
     }
   COGL_TRACE_END (StackTrackerRestackManagedRaise);
 
-  old_pos--;
-  new_pos--;
+  windows_pos--;
+  managed_pos--;
 
   COGL_TRACE_BEGIN_SCOPED (StackTrackerRestackManagedRestack,
                            "Meta::StackTracker::restack_managed#restack()");
-  while (old_pos >= 0 && new_pos >= 0)
+  while (windows_pos >= 0 && managed_pos >= 0)
     {
-      if (meta_stack_tracker_is_guard_window (tracker, windows[old_pos]))
-        break;
+      MetaWindow *window;
 
-      if (windows[old_pos] == managed[new_pos])
+      if (meta_stack_tracker_is_guard_window (tracker, windows[windows_pos]))
         {
-          old_pos--;
-          new_pos--;
+          /* All managed windows yet to be restacked were previously hidden
+           * (i.e below the guard window). Hence, they must all the moved;
+           * other logic within this loop would either be unnecessary or
+           * straight-up incorrect.
+           */
+          break;
+        }
+
+      if (windows[windows_pos] == managed[managed_pos])
+        {
+          windows_pos--;
+          managed_pos--;
           continue;
         }
 
-      MetaWindow *old_window = meta_display_lookup_stack_id (tracker->display, windows[old_pos]);
-      if (!old_window || old_window->override_redirect || old_window->unmanaging)
+      window = meta_display_lookup_stack_id (tracker->display, windows[windows_pos]);
+      if (!window || window->override_redirect || window->unmanaging)
         {
-          old_pos--;
+          windows_pos--;
           continue;
         }
 
-      meta_stack_tracker_lower_below (tracker, managed[new_pos], managed[new_pos + 1]);
+      meta_stack_tracker_lower_below (tracker,
+                                      managed[managed_pos],
+                                      managed[managed_pos + 1]);
       meta_stack_tracker_get_stack (tracker, &windows, &n_windows);
-      /* Moving managed[new_pos] above windows[old_pos] moves the window at old_pos down by one,
-       * we'll examine it again to see if it matches the next new window */
-      old_pos--;
-      new_pos--;
+
+      /* Since, **before the move**,
+       *
+       * (the position of `managed[managed_pos]` within `windows`) <
+       * `windows_pos` <
+       * (the position of `managed[managed_pos + 1]` within `windows`)
+       *
+       * always, moving `managed[managed_pos]` below `managed[managed_pos + 1]`
+       * moves the window at `windows_pos` down one position. We'll examine it
+       * again on the next iteration to see if it matches the next managed window.
+       */
+      windows_pos--;
+      managed_pos--;
     }
   COGL_TRACE_END (StackTrackerRestackManagedRestack);
 
   COGL_TRACE_BEGIN_SCOPED (StackTrackerRestackManagedLower,
                            "Meta::StackTracker::restack_managed#lower()");
-  while (new_pos >= 0)
+  /* Restack all previously hidden managed windows yet to be restacked. */
+  for (; managed_pos >= 0; managed_pos--)
     {
-      meta_stack_tracker_lower_below (tracker, managed[new_pos], managed[new_pos + 1]);
-      new_pos--;
+      meta_stack_tracker_lower_below (tracker,
+                                      managed[managed_pos],
+                                      managed[managed_pos + 1]);
     }
   COGL_TRACE_END (StackTrackerRestackManagedLower);
 }
