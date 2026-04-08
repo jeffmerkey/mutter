@@ -261,9 +261,9 @@ meta_stack_tracker_dump (MetaStackTracker *tracker)
   for (l = tracker->unverified_predictions->head; l; l = l->next)
     {
       MetaStackOp *op = l->data;
-      meta_stack_op_dump (tracker, op, "", l->next ? ", " : "");
+      meta_stack_op_dump (tracker, op, "    ", l->next ? ", " : "");
     }
-  meta_topic (META_DEBUG_STACK, "]");
+  meta_topic (META_DEBUG_STACK, "  ]");
   if (tracker->predicted_stack)
     {
       meta_topic (META_DEBUG_STACK, "  predicted_stack: ");
@@ -371,6 +371,13 @@ meta_stack_op_apply (MetaStackTracker *tracker,
                      GArray           *stack,
                      ApplyFlags        apply_flags)
 {
+  if (stack == tracker->verified_stack)
+    meta_stack_op_dump (tracker, op, "Applying to verified_stack: ", "");
+  else if (stack == tracker->predicted_stack)
+    meta_stack_op_dump (tracker, op, "Applying to predicted_stack: ", "");
+  else
+    meta_stack_op_dump (tracker, op, "Applying: ", "");
+
   switch (op->any.type)
     {
     case STACK_OP_ADD:
@@ -522,6 +529,8 @@ query_xserver_stack (MetaDisplay      *display,
   guint n_children;
   guint i, old_len;
 
+  meta_topic (META_DEBUG_STACK, "Querying X server stack");
+
   tracker->xserver_serial = XNextRequest (x11_display->xdisplay);
 
   if (!XQueryTree (x11_display->xdisplay,
@@ -539,6 +548,8 @@ query_xserver_stack (MetaDisplay      *display,
   for (i = 0; i < n_children; i++)
     g_array_index (tracker->verified_stack, guint64, old_len + i) = children[i];
 
+  meta_stack_tracker_dump (tracker);
+
   XFree (children);
 }
 
@@ -549,6 +560,8 @@ drop_x11_windows (MetaDisplay      *display,
   GArray *new_stack;
   GList *l;
   int i;
+
+  meta_topic (META_DEBUG_STACK, "Dropping X11 windows");
 
   tracker->xserver_serial = 0;
 
@@ -575,6 +588,8 @@ drop_x11_windows (MetaDisplay      *display,
           meta_stack_op_free (op);
         }
     }
+
+  meta_stack_tracker_dump (tracker);
 }
 #endif /* HAVE_XWAYLAND */
 
@@ -592,12 +607,12 @@ on_stack_changed (MetaStack        *stack,
 
   COGL_TRACE_BEGIN_SCOPED (StackChanged, "Meta::StackTracker::on_stack_changed()");
 
-  meta_topic (META_DEBUG_STACK, "Syncing window stack to server");
+  meta_topic (META_DEBUG_STACK, "Restacking windows");
 
   all_root_children_stacked = g_array_new (FALSE, FALSE, sizeof (uint64_t));
   hidden_stack_ids = g_array_new (FALSE, FALSE, sizeof (uint64_t));
 
-  meta_topic (META_DEBUG_STACK, "Bottom to top: ");
+  meta_topic (META_DEBUG_STACK, "Bottom to top:");
 
   sorted = meta_stack_list_windows (stack, NULL);
 
@@ -609,8 +624,8 @@ on_stack_changed (MetaStack        *stack,
       if (w->unmanaging)
         continue;
 
-      meta_topic (META_DEBUG_STACK, "  %u:%d - %s ",
-                  w->layer, w->stack_position, w->desc);
+      meta_topic (META_DEBUG_STACK, "  %u:%d - %s [hidden: %u]",
+                  w->layer, w->stack_position, w->desc, w->hidden);
 
 #ifdef HAVE_XWAYLAND
       if (w->client_type == META_WINDOW_CLIENT_TYPE_X11)
@@ -647,11 +662,6 @@ on_stack_changed (MetaStack        *stack,
     }
 #endif
 
-  /* Sync to server */
-
-  meta_topic (META_DEBUG_STACK, "Restacking %u windows",
-              all_root_children_stacked->len);
-
   meta_stack_tracker_restack_managed (tracker,
                                       (uint64_t *)all_root_children_stacked->data,
                                       all_root_children_stacked->len);
@@ -668,6 +678,8 @@ MetaStackTracker *
 meta_stack_tracker_new (MetaStack *stack)
 {
   MetaStackTracker *tracker;
+
+  meta_topic (META_DEBUG_STACK, "Creating stack tracker");
 
   tracker = g_new0 (MetaStackTracker, 1);
   tracker->display = stack->display;
@@ -1017,12 +1029,16 @@ meta_stack_tracker_get_stack (MetaStackTracker *tracker,
         {
           GList *l;
 
+          meta_topic (META_DEBUG_STACK, "Creating predicted_stack");
+
           tracker->predicted_stack = copy_stack (tracker->verified_stack);
           for (l = tracker->unverified_predictions->head; l; l = l->next)
             {
               MetaStackOp *op = l->data;
               meta_stack_op_apply (tracker, op, tracker->predicted_stack, APPLY_DEFAULT);
             }
+
+          meta_stack_tracker_dump (tracker);
         }
 
       stack = tracker->predicted_stack;
@@ -1051,6 +1067,8 @@ meta_stack_tracker_sync_stack (MetaStackTracker *tracker)
 #ifdef HAVE_XWAYLAND
   MetaFrame *frame;
 #endif
+
+  meta_topic (META_DEBUG_STACK, "Syncing window stack to compositor");
 
   if (tracker->sync_stack_later)
     {
@@ -1299,6 +1317,8 @@ meta_stack_tracker_keep_override_redirect_on_top (MetaStackTracker *tracker)
   int n_windows, pos;
   int topmost_non_or_pos;
 
+  meta_topic (META_DEBUG_STACK, "Keeping override-redirect windows on top");
+
   meta_stack_tracker_get_stack (tracker, &windows, &n_windows);
 
   /* Find the topmost non-override-redirect window. */
@@ -1357,6 +1377,9 @@ meta_stack_tracker_restack_managed (MetaStackTracker *tracker,
   /* NB: Windows are ordered from bottom to top in the stacks,
    * but restacked from top to bottom.
    */
+
+  meta_topic (META_DEBUG_STACK, "Restacking %u managed windows",
+              n_managed);
 
   COGL_TRACE_BEGIN_SCOPED (StackTrackerRestackManagedGet,
                            "Meta::StackTracker::restack_managed#get()");
@@ -1479,6 +1502,9 @@ meta_stack_tracker_restack_at_bottom (MetaStackTracker *tracker,
                            "Meta::StackTracker::restack_at_bottom()");
   if (n_bottom == 0)
     return;
+
+  meta_topic (META_DEBUG_STACK, "Restacking %u windows at the bottom",
+              n_bottom);
 
   meta_stack_tracker_get_stack (tracker, &windows, &n_windows);
 
