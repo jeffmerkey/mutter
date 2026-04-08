@@ -1299,36 +1299,47 @@ meta_stack_tracker_lower (MetaStackTracker *tracker,
 static void
 meta_stack_tracker_keep_override_redirect_on_top (MetaStackTracker *tracker)
 {
-  guint64 *stack;
-  int n_windows, i;
-  int topmost_non_or;
+  guint64 *windows;
+  int n_windows, pos;
+  int topmost_non_or_pos;
 
-  meta_stack_tracker_get_stack (tracker, &stack, &n_windows);
+  meta_stack_tracker_get_stack (tracker, &windows, &n_windows);
 
-  for (i = n_windows - 1; i >= 0; i--)
+  /* Find the topmost non-override-redirect window. */
+  for (pos = n_windows - 1; pos >= 0; pos--)
     {
       MetaWindow *window;
 
-      window = meta_display_lookup_stack_id (tracker->display, stack[i]);
+      window = meta_display_lookup_stack_id (tracker->display, windows[pos]);
       if (window && window->layer != META_LAYER_OVERRIDE_REDIRECT)
         break;
     }
 
-  topmost_non_or = i;
+  topmost_non_or_pos = pos;
+  pos--;
 
-  for (i -= 1; i >= 0; i--)
+  /* Ensure all override-redirect windows are above the topmost
+   * non-override-redirect window.
+   */
+  for (; pos >= 0; pos--)
     {
       MetaWindow *window;
 
-      if (meta_stack_tracker_is_guard_window (tracker, stack[i]))
+      if (meta_stack_tracker_is_guard_window (tracker, windows[pos]))
         break;
 
-      window = meta_display_lookup_stack_id (tracker->display, stack[i]);
+      window = meta_display_lookup_stack_id (tracker->display, windows[pos]);
       if (window && window->layer == META_LAYER_OVERRIDE_REDIRECT)
         {
-          meta_stack_tracker_raise_above (tracker, stack[i], stack[topmost_non_or]);
-          meta_stack_tracker_get_stack (tracker, &stack, &n_windows);
-          topmost_non_or -= 1;
+          meta_stack_tracker_raise_above (tracker,
+                                          windows[pos],
+                                          windows[topmost_non_or_pos]);
+          meta_stack_tracker_get_stack (tracker, &windows, &n_windows);
+
+          /* Moving `windows[pos]` above `windows[topmost_non_or_pos]` moves the
+           * topmost non-override-redirect window down one position.
+           */
+          topmost_non_or_pos--;
         }
     }
 }
