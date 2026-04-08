@@ -1461,8 +1461,8 @@ meta_stack_tracker_restack_managed (MetaStackTracker *tracker,
 
 void
 meta_stack_tracker_restack_at_bottom (MetaStackTracker *tracker,
-                                      const guint64    *new_order,
-                                      int               n_new_order)
+                                      const guint64    *bottom,
+                                      int               n_bottom)
 {
   guint64 *windows;
   int n_windows;
@@ -1470,18 +1470,21 @@ meta_stack_tracker_restack_at_bottom (MetaStackTracker *tracker,
 
   COGL_TRACE_BEGIN_SCOPED (StackTrackerRestackAtBottom,
                            "Meta::StackTracker::restack_at_bottom()");
+  if (n_bottom == 0)
+    return;
+
   meta_stack_tracker_get_stack (tracker, &windows, &n_windows);
 
-  for (pos = 0; pos < n_new_order; pos++)
+  for (pos = 0; pos < n_bottom; pos++)
     {
-      if (pos >= n_windows || windows[pos] != new_order[pos])
-        {
-          if (pos == 0)
-            meta_stack_tracker_lower (tracker, new_order[pos]);
-          else
-            meta_stack_tracker_raise_above (tracker, new_order[pos], new_order[pos - 1]);
+      if (pos < n_windows && windows[pos] == bottom[pos])
+        continue;
 
-          meta_stack_tracker_get_stack (tracker, &windows, &n_windows);
-        }
+      if (pos == 0)
+        meta_stack_tracker_lower (tracker, bottom[pos]);
+      else
+        meta_stack_tracker_raise_above (tracker, bottom[pos], bottom[pos - 1]);
+
+      meta_stack_tracker_get_stack (tracker, &windows, &n_windows);
     }
 }
