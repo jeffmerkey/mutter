@@ -170,6 +170,9 @@ endif
 subdir('protocol')
 subdir('drm-mock')
 subdir('wayland-test-clients')
+if get_option('xwayland')
+  subdir('x11-test-clients')
+endif
 
 test_env = environment()
 
@@ -1212,6 +1215,11 @@ if have_xwayland
     install_rpath: pkglibdir,
   )
 
+  x11_test_utils = [
+    'meta-x11-test-utils.c',
+    'meta-x11-test-utils.h',
+  ]
+
   test_cases += [
     {
       'name': 'wayland-x11-interop',
@@ -1237,6 +1245,17 @@ if have_xwayland
       ],
       'sources': [
         'xwayland-tests.c',
+      ],
+    },
+    {
+      'name': 'x11-tests',
+      'suite': 'x11',
+      'depends': [
+        x11_test_client_executables['xwayland-allow-commits-test'],
+      ],
+      'sources': [
+        'x11-tests.c',
+        x11_test_utils,
       ],
     },
   ]

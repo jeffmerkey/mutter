@@ -82,6 +82,7 @@ void     meta_window_actor_queue_frame_drawn   (MetaWindowActor *self,
 void meta_window_actor_effect_completed (MetaWindowActor  *actor,
                                          MetaPluginEffect  event);
 
+META_EXPORT_TEST
 MetaSurfaceActor *meta_window_actor_get_surface (MetaWindowActor *self);
 
 MetaSurfaceActor *meta_window_actor_get_scanout_candidate (MetaWindowActor *self);
