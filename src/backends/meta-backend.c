@@ -98,6 +98,7 @@ enum
 
   PROP_CONTEXT,
   PROP_CAPABILITIES,
+  PROP_LAST_DEVICE,
 
   N_PROPS
 };
@@ -790,6 +791,9 @@ meta_backend_get_property (GObject    *object,
     case PROP_CAPABILITIES:
       g_value_set_flags (value, meta_backend_get_capabilities (backend));
       break;
+    case PROP_LAST_DEVICE:
+      g_value_set_object (value, priv->current_device);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -824,6 +828,11 @@ meta_backend_class_init (MetaBackendClass *klass)
                         META_BACKEND_CAPABILITY_NONE,
                         G_PARAM_READABLE |
                         G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_LAST_DEVICE] =
+    g_param_spec_object ("last-input-device", NULL, NULL,
+                         CLUTTER_TYPE_INPUT_DEVICE,
+                         G_PARAM_READABLE |
+                         G_PARAM_STATIC_STRINGS);
   g_object_class_install_properties (object_class, N_PROPS, obj_props);
 
   signals[KEYMAP_CHANGED] =
@@ -1430,6 +1439,23 @@ meta_backend_get_core_idle_monitor (MetaBackend *backend)
   MetaBackendPrivate *priv = meta_backend_get_instance_private (backend);
 
   return meta_idle_manager_get_core_monitor (priv->idle_manager);
+}
+
+/**
+ * meta_backend_get_last_input_device:
+ * @backend: a #MetaBackend
+ *
+ * Gets the last input device that had the focus.
+ *
+ * Return value: (transfer none) (nullable): a #ClutterInputDevice, or %NULL if no device has the focus
+ */
+ClutterInputDevice *
+meta_backend_get_last_input_device (MetaBackend *backend)
+{
+  g_return_val_if_fail (META_IS_BACKEND (backend), NULL);
+  MetaBackendPrivate *priv = meta_backend_get_instance_private (backend);
+
+  return priv->current_device;
 }
 
 MetaIdleManager *

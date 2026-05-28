@@ -100,3 +100,6 @@ MetaCursorTracker * meta_backend_get_cursor_tracker (MetaBackend *backend);
 
 META_EXPORT
 MetaLogicalMonitor * meta_backend_get_current_logical_monitor (MetaBackend *backend);
+
+META_EXPORT
+ClutterInputDevice * meta_backend_get_last_input_device (MetaBackend *backend);
