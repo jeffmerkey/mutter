@@ -137,6 +137,9 @@ clutter_key_controller_handle_event (ClutterAction      *action,
       actor = clutter_actor_meta_get_actor (CLUTTER_ACTOR_META (action));
       gtype = G_OBJECT_TYPE (actor);
 
+      if (evtype == CLUTTER_KEY_RELEASE)
+        modifiers |= CLUTTER_RELEASE_MASK;
+
       while (gtype != G_TYPE_INVALID)
         {
           ClutterBindingPool *binding_pool;
