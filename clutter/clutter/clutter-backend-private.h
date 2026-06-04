@@ -137,10 +137,6 @@ gboolean clutter_backend_foreach_sprite (ClutterBackend               *backend,
                                          gpointer                      user_data);
 
 CLUTTER_EXPORT
-ClutterCursor * clutter_backend_get_cursor (ClutterBackend    *backend,
-                                            ClutterCursorType  cursor_type);
-
-CLUTTER_EXPORT
 void clutter_backend_destroy (ClutterBackend *backend);
 
 G_END_DECLS

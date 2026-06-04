@@ -647,6 +647,15 @@ clutter_backend_destroy (ClutterBackend *backend)
   g_object_unref (backend);
 }
 
+/**
+ * clutter_backend_get_cursor:
+ * @backend: a `ClutterBackend`
+ * @cursor_type: a [enum@Clutter.CursorType]
+ *
+ * Gets a [class@Clutter.Cursor] that represents the given @cursor_type
+ *
+ * Returns: (transfer full): The cursor object holding @cursor_type iconography
+ **/
 ClutterCursor *
 clutter_backend_get_cursor (ClutterBackend    *backend,
                             ClutterCursorType  cursor_type)

@@ -29,6 +29,7 @@
 
 #include "cogl/cogl.h"
 
+#include "clutter/clutter-cursor.h"
 #include "clutter/clutter-keymap.h"
 #include "clutter/clutter-types.h"
 #include "clutter/clutter-seat.h"
@@ -75,6 +76,10 @@ ClutterSprite * clutter_backend_get_pointer_sprite (ClutterBackend *backend,
 CLUTTER_EXPORT
 ClutterKeyFocus * clutter_backend_get_key_focus (ClutterBackend *backend,
                                                  ClutterStage   *stage);
+
+CLUTTER_EXPORT
+ClutterCursor * clutter_backend_get_cursor (ClutterBackend    *backend,
+                                            ClutterCursorType  cursor_type);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (ClutterBackend, g_object_unref)
 
