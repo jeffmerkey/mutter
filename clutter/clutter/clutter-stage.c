@@ -2672,6 +2672,9 @@ clutter_stage_paint_to_framebuffer_clipped (ClutterStage       *stage,
   ClutterStagePrivate *priv = clutter_stage_get_instance_private (stage);
   ClutterPaintContext *paint_context;
   g_autoptr (MtkRegion) intersection = NULL;
+  float exact_viewport[4];
+  float viewport[4];
+  graphene_matrix_t projection;
 
   COGL_TRACE_BEGIN_SCOPED (PaintToFramebuffer,
                            "Clutter::Stage::paint_to_framebuffer()");
@@ -2698,13 +2701,20 @@ clutter_stage_paint_to_framebuffer_clipped (ClutterStage       *stage,
                                                paint_flags,
                                                color_state);
 
+  exact_viewport[0] = -(rect->x * scale);
+  exact_viewport[1] = -(rect->y * scale);
+  exact_viewport[2] = priv->viewport[2] * scale;
+  exact_viewport[3] = priv->viewport[3] * scale;
+  clutter_stage_calculate_viewport_and_projection (&priv->projection,
+                                                   exact_viewport,
+                                                   viewport,
+                                                   &projection);
+
   cogl_framebuffer_push_matrix (framebuffer);
-  cogl_framebuffer_set_projection_matrix (framebuffer, &priv->projection);
+  cogl_framebuffer_set_projection_matrix (framebuffer, &projection);
   cogl_framebuffer_set_viewport (framebuffer,
-                                 -(rect->x * scale),
-                                 -(rect->y * scale),
-                                 priv->viewport[2] * scale,
-                                 priv->viewport[3] * scale);
+                                 viewport[0], viewport[1],
+                                 viewport[2], viewport[3]);
   clutter_actor_paint (CLUTTER_ACTOR (stage), paint_context);
   cogl_framebuffer_pop_matrix (framebuffer);
 
