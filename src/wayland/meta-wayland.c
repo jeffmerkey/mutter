@@ -38,6 +38,7 @@
 #include "core/events.h"
 #include "core/meta-context-private.h"
 #include "wayland/meta-wayland-activation.h"
+#include "wayland/meta-wayland-background-effect.h"
 #include "wayland/meta-wayland-buffer.h"
 #include "wayland/meta-wayland-client-private.h"
 #include "wayland/meta-wayland-color-management.h"
@@ -1006,6 +1007,7 @@ meta_wayland_compositor_new (MetaContext *context)
   meta_wayland_fifo_init (compositor);
   meta_wayland_init_cursor_shape (compositor);
   meta_wayland_init_color_representation (compositor);
+  meta_wayland_init_background_effect (compositor);
   meta_wayland_init_fixes (compositor);
 
 #ifdef HAVE_XWAYLAND

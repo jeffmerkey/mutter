@@ -93,6 +93,8 @@ struct _MetaWaylandSurfaceState
   gboolean input_region_set;
   MtkRegion *opaque_region;
   gboolean opaque_region_set;
+  MtkRegion *background_blur_region;
+  gboolean background_blur_region_set;
 
   /* wl_surface.frame */
   struct wl_list frame_callback_list;
@@ -185,6 +187,7 @@ struct _MetaWaylandSurface
   MetaWaylandSurfaceRole *role;
   MtkRegion *input_region;
   MtkRegion *opaque_region;
+  MtkRegion *background_blur_region;
   int32_t offset_x, offset_y;
   GHashTable *outputs;
   MtkMonitorTransform buffer_transform;

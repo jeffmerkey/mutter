@@ -435,6 +435,8 @@ meta_wayland_surface_state_set_default (MetaWaylandSurfaceState *state)
   state->input_region_set = FALSE;
   state->opaque_region = NULL;
   state->opaque_region_set = FALSE;
+  state->background_blur_region = NULL;
+  state->background_blur_region_set = FALSE;
 
   state->surface_damage = mtk_region_create ();
   state->buffer_damage = mtk_region_create ();
@@ -495,6 +497,7 @@ meta_wayland_surface_state_clear (MetaWaylandSurfaceState *state)
   g_clear_pointer (&state->buffer_damage, mtk_region_unref);
   g_clear_pointer (&state->input_region, mtk_region_unref);
   g_clear_pointer (&state->opaque_region, mtk_region_unref);
+  g_clear_pointer (&state->background_blur_region, mtk_region_unref);
   g_clear_pointer (&state->xdg_positioner, g_free);
 
   g_clear_signal_handler (&state->buffer_destroy_handler_id, state->buffer);
@@ -564,6 +567,16 @@ meta_wayland_surface_state_merge_into (MetaWaylandSurfaceState *from,
         to->opaque_region = mtk_region_ref (from->opaque_region);
 
       to->opaque_region_set = TRUE;
+    }
+
+  if (from->background_blur_region_set)
+    {
+      g_clear_pointer (&to->background_blur_region, mtk_region_unref);
+      if (from->background_blur_region)
+        to->background_blur_region =
+          mtk_region_ref (from->background_blur_region);
+
+      to->background_blur_region_set = TRUE;
     }
 
   if (from->has_new_geometry)
@@ -997,6 +1010,14 @@ meta_wayland_surface_apply_state (MetaWaylandSurface      *surface,
       g_clear_pointer (&surface->opaque_region, mtk_region_unref);
       if (state->opaque_region)
         surface->opaque_region = mtk_region_ref (state->opaque_region);
+    }
+
+  if (state->background_blur_region_set)
+    {
+      g_clear_pointer (&surface->background_blur_region, mtk_region_unref);
+      if (state->background_blur_region)
+        surface->background_blur_region =
+          mtk_region_ref (state->background_blur_region);
     }
 
   if (state->input_region_set)
@@ -1743,6 +1764,7 @@ meta_wayland_surface_dispose (GObject *object)
 
   g_clear_pointer (&surface->opaque_region, mtk_region_unref);
   g_clear_pointer (&surface->input_region, mtk_region_unref);
+  g_clear_pointer (&surface->background_blur_region, mtk_region_unref);
 
   meta_wayland_compositor_remove_frame_callback_surface (compositor, surface);
   meta_wayland_compositor_remove_presentation_feedback_surface (compositor,

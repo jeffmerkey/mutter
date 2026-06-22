@@ -252,6 +252,21 @@ meta_wayland_actor_surface_real_sync_actor_state (MetaWaylandActorSurface *actor
       {
         meta_surface_actor_set_opaque_region (surface_actor, NULL);
       }
+
+    if (surface->background_blur_region)
+      {
+        g_autoptr (MtkRegion) background_blur_region = NULL;
+
+        background_blur_region =
+          mtk_region_copy (surface->background_blur_region);
+        mtk_region_intersect_rectangle (background_blur_region, &surface_rect);
+        meta_surface_actor_set_background_blur_region (surface_actor,
+                                                       background_blur_region);
+      }
+    else
+      {
+        meta_surface_actor_set_background_blur_region (surface_actor, NULL);
+      }
   }
 
   meta_shaped_texture_set_transform (stex, surface->buffer_transform);
