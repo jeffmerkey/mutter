@@ -26,6 +26,7 @@ G_BEGIN_DECLS
 
 typedef struct _MetaStageWatch MetaStageWatch;
 typedef struct _MetaOverlay    MetaOverlay;
+typedef struct _MetaStageRedrawClipFilter MetaStageRedrawClipFilter;
 
 typedef enum
 {
@@ -42,6 +43,11 @@ typedef void (* MetaStageWatchFunc) (MetaStage        *stage,
                                      const MtkRegion  *redraw_clip,
                                      ClutterFrame     *frame,
                                      gpointer          user_data);
+
+typedef gboolean (* MetaStageRedrawClipFilterFunc) (MetaStage        *stage,
+                                                    ClutterStageView *stage_view,
+                                                    MtkRegion        *redraw_clip,
+                                                    gpointer          user_data);
 
 ClutterActor     *meta_stage_new                     (MetaBackend *backend);
 
@@ -68,6 +74,15 @@ MetaStageWatch * meta_stage_watch_view (MetaStage           *stage,
 META_EXPORT_TEST
 void meta_stage_remove_watch (MetaStage      *stage,
                               MetaStageWatch *watch);
+
+MetaStageRedrawClipFilter * meta_stage_add_redraw_clip_filter (MetaStage                     *stage,
+                                                               MetaStageRedrawClipFilterFunc  filter_func,
+                                                               gpointer                       user_data,
+                                                               GDestroyNotify                 destroy_notify);
+void meta_stage_remove_redraw_clip_filter (MetaStageRedrawClipFilter *filter);
+void meta_stage_apply_redraw_clip_filters (MetaStage        *stage,
+                                           ClutterStageView *stage_view,
+                                           MtkRegion        *redraw_clip);
 
 void meta_stage_rebuild_views (MetaStage *stage);
 

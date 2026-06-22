@@ -31,7 +31,10 @@
 
 MetaShapedTexture * meta_shaped_texture_new (ClutterContext    *clutter_context,
                                              ClutterColorState *color_state);
-
+void meta_shaped_texture_paint_content (MetaShapedTexture   *stex,
+                                        ClutterActor        *actor,
+                                        ClutterPaintNode    *root_node,
+                                        ClutterPaintContext *paint_context);
 void meta_shaped_texture_set_texture (MetaShapedTexture *stex,
                                       MetaMultiTexture  *multi_texture);
 void meta_shaped_texture_set_color_state (MetaShapedTexture *stex,
@@ -65,6 +68,7 @@ float meta_shaped_texture_get_unscaled_height (MetaShapedTexture *stex);
 
 void meta_shaped_texture_set_clip_region (MetaShapedTexture *stex,
                                           MtkRegion         *clip_region);
+MtkRegion * meta_shaped_texture_get_clip_region (MetaShapedTexture *stex);
 void meta_shaped_texture_set_opaque_region (MetaShapedTexture *stex,
                                             MtkRegion         *opaque_region);
 

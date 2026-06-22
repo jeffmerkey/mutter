@@ -318,6 +318,14 @@ meta_shaped_texture_set_clip_region (MetaShapedTexture *stex,
     stex->clip_region = mtk_region_ref (clip_region);
 }
 
+MtkRegion *
+meta_shaped_texture_get_clip_region (MetaShapedTexture *stex)
+{
+  g_return_val_if_fail (META_IS_SHAPED_TEXTURE (stex), NULL);
+
+  return stex->clip_region;
+}
+
 static void
 meta_shaped_texture_reset_pipelines (MetaShapedTexture *stex)
 {
@@ -1087,13 +1095,12 @@ do_paint_content (MetaShapedTexture   *stex,
   g_clear_pointer (&blended_tex_region, mtk_region_unref);
 }
 
-static void
-meta_shaped_texture_paint_content (ClutterContent      *content,
+void
+meta_shaped_texture_paint_content (MetaShapedTexture   *stex,
                                    ClutterActor        *actor,
                                    ClutterPaintNode    *root_node,
                                    ClutterPaintContext *paint_context)
 {
-  MetaShapedTexture *stex = META_SHAPED_TEXTURE (content);
   ClutterActorBox alloc;
   uint8_t opacity;
 
@@ -1124,6 +1131,18 @@ meta_shaped_texture_paint_content (ClutterContent      *content,
   do_paint_content (stex, root_node, paint_context, &alloc, opacity);
 }
 
+static void
+meta_shaped_texture_clutter_paint_content (ClutterContent      *content,
+                                           ClutterActor        *actor,
+                                           ClutterPaintNode    *root_node,
+                                           ClutterPaintContext *paint_context)
+{
+  meta_shaped_texture_paint_content (META_SHAPED_TEXTURE (content),
+                                     actor,
+                                     root_node,
+                                     paint_context);
+}
+
 static gboolean
 meta_shaped_texture_get_preferred_size (ClutterContent *content,
                                         float          *width,
@@ -1145,7 +1164,7 @@ meta_shaped_texture_get_preferred_size (ClutterContent *content,
 static void
 clutter_content_iface_init (ClutterContentInterface *iface)
 {
-  iface->paint_content = meta_shaped_texture_paint_content;
+  iface->paint_content = meta_shaped_texture_clutter_paint_content;
   iface->get_preferred_size = meta_shaped_texture_get_preferred_size;
 }
 

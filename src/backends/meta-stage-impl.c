@@ -35,6 +35,7 @@
 #include <math.h>
 
 #include "backends/meta-renderer.h"
+#include "backends/meta-stage-private.h"
 #include "backends/meta-stage-view-private.h"
 #include "clutter/clutter-mutter.h"
 #include "cogl/cogl.h"
@@ -520,6 +521,9 @@ meta_stage_impl_redraw_view_primary (MetaStageImpl    *stage_impl,
     cogl_context_has_winsys_feature (context, COGL_WINSYS_FEATURE_BUFFER_AGE);
 
   redraw_clip = clutter_stage_view_take_accumulated_redraw_clip (stage_view);
+  meta_stage_apply_redraw_clip_filters (META_STAGE (stage_impl->wrapper),
+                                        stage_view,
+                                        redraw_clip);
 
   /* NB: a NULL redraw clip == full stage redraw */
   if (!redraw_clip)

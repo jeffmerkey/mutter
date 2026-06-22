@@ -36,6 +36,14 @@ struct _MetaStageWatch
   gpointer user_data;
 };
 
+struct _MetaStageRedrawClipFilter
+{
+  MetaStage *stage;
+  MetaStageRedrawClipFilterFunc filter_func;
+  gpointer user_data;
+  GDestroyNotify destroy_notify;
+};
+
 typedef struct _MetaOverlayViewState
 {
   graphene_rect_t painted_rect;
@@ -64,6 +72,8 @@ struct _MetaStage
   MetaBackend *backend;
 
   GPtrArray *watchers[META_N_WATCH_MODES];
+
+  GList *redraw_clip_filters;
 
   GList *overlays;
 };
@@ -94,6 +104,15 @@ meta_overlay_free (MetaOverlay *overlay)
   g_hash_table_unref (overlay->view_states);
 
   g_free (overlay);
+}
+
+static void
+meta_stage_redraw_clip_filter_free (MetaStageRedrawClipFilter *filter)
+{
+  if (filter->destroy_notify)
+    filter->destroy_notify (filter->user_data);
+
+  g_free (filter);
 }
 
 static void
@@ -219,6 +238,9 @@ meta_stage_finalize (GObject *object)
 
   for (i = 0; i < META_N_WATCH_MODES; i++)
     g_clear_pointer (&stage->watchers[i], g_ptr_array_unref);
+
+  g_clear_list (&stage->redraw_clip_filters,
+                (GDestroyNotify) meta_stage_redraw_clip_filter_free);
 
   G_OBJECT_CLASS (meta_stage_parent_class)->finalize (object);
 }
@@ -536,6 +558,75 @@ meta_stage_remove_watch (MetaStage      *stage,
     }
 
   g_assert (removed);
+}
+
+MetaStageRedrawClipFilter *
+meta_stage_add_redraw_clip_filter (MetaStage                     *stage,
+                                   MetaStageRedrawClipFilterFunc  filter_func,
+                                   gpointer                       user_data,
+                                   GDestroyNotify                 destroy_notify)
+{
+  MetaStageRedrawClipFilter *filter;
+
+  g_return_val_if_fail (META_IS_STAGE (stage), NULL);
+  g_return_val_if_fail (filter_func != NULL, NULL);
+
+  filter = g_new0 (MetaStageRedrawClipFilter, 1);
+  filter->stage = stage;
+  filter->filter_func = filter_func;
+  filter->user_data = user_data;
+  filter->destroy_notify = destroy_notify;
+
+  stage->redraw_clip_filters = g_list_prepend (stage->redraw_clip_filters,
+                                               filter);
+
+  return filter;
+}
+
+void
+meta_stage_remove_redraw_clip_filter (MetaStageRedrawClipFilter *filter)
+{
+  MetaStage *stage;
+  GList *link;
+
+  stage = filter->stage;
+  link = g_list_find (stage->redraw_clip_filters, filter);
+  g_return_if_fail (link != NULL);
+
+  stage->redraw_clip_filters =
+    g_list_delete_link (stage->redraw_clip_filters, link);
+
+  meta_stage_redraw_clip_filter_free (filter);
+}
+
+void
+meta_stage_apply_redraw_clip_filters (MetaStage        *stage,
+                                      ClutterStageView *stage_view,
+                                      MtkRegion        *redraw_clip)
+{
+  gboolean changed;
+
+  g_return_if_fail (META_IS_STAGE (stage));
+  g_return_if_fail (CLUTTER_IS_STAGE_VIEW (stage_view));
+
+  if (!redraw_clip || !stage->redraw_clip_filters)
+    return;
+
+  do
+    {
+      changed = FALSE;
+
+      for (GList *l = stage->redraw_clip_filters; l; l = l->next)
+        {
+          MetaStageRedrawClipFilter *filter = l->data;
+
+          changed |= filter->filter_func (stage,
+                                          stage_view,
+                                          redraw_clip,
+                                          filter->user_data);
+        }
+    }
+  while (changed);
 }
 
 void

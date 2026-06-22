@@ -21,8 +21,10 @@
 
 #include "clutter/clutter.h"
 #include "compositor/clutter-utils.h"
+#include "compositor/meta-background-effect.h"
 #include "compositor/meta-cullable.h"
 #include "compositor/meta-shaped-texture-private.h"
+#include "compositor/meta-surface-content.h"
 #include "compositor/meta-window-actor-private.h"
 #include "meta/meta-shaped-texture.h"
 
@@ -40,9 +42,12 @@ static GParamSpec *obj_props[N_PROPS];
 
 typedef struct _MetaSurfaceActorPrivate
 {
-  MetaShapedTexture *texture;
+  MetaSurfaceContent *content;
 
   MtkRegion *input_region;
+  MtkRegion *background_blur_region;
+  MtkRegion *background_blur_sample_region;
+  MetaBackgroundBlur *background_blur;
 
   /* MetaCullable regions, see that documentation for more details */
   MtkRegion *unobscured_region;
@@ -52,6 +57,10 @@ typedef struct _MetaSurfaceActorPrivate
   MtkRegion *pending_damage;
   gboolean is_frozen;
 } MetaSurfaceActorPrivate;
+
+#define BACKGROUND_EFFECT_BLUR_RADIUS 24.0f
+#define BACKGROUND_EFFECT_SATURATION 1.25f
+#define BACKGROUND_EFFECT_NOISE 0.015f
 
 static void cullable_iface_init (MetaCullableInterface *iface);
 
@@ -110,11 +119,10 @@ update_is_obscured (MetaSurfaceActor *surface_actor)
 static MtkRectangle
 get_preferred_size_bounds (MetaSurfaceActor *surface_actor)
 {
-  MetaSurfaceActorPrivate *priv =
-    meta_surface_actor_get_instance_private (surface_actor);
+  MetaShapedTexture *texture = meta_surface_actor_get_texture (surface_actor);
   float width, height;
 
-  clutter_content_get_preferred_size (CLUTTER_CONTENT (priv->texture),
+  clutter_content_get_preferred_size (CLUTTER_CONTENT (texture),
                                       &width,
                                       &height);
 
@@ -155,9 +163,7 @@ static void
 set_clip_region (MetaSurfaceActor *surface_actor,
                  MtkRegion        *clip_region)
 {
-  MetaSurfaceActorPrivate *priv =
-    meta_surface_actor_get_instance_private (surface_actor);
-  MetaShapedTexture *stex = priv->texture;
+  MetaShapedTexture *texture = meta_surface_actor_get_texture (surface_actor);
 
   if (clip_region && !mtk_region_is_empty (clip_region))
     {
@@ -166,11 +172,11 @@ set_clip_region (MetaSurfaceActor *surface_actor,
 
       clip_region_copy = mtk_region_copy (clip_region);
       mtk_region_intersect_rectangle (clip_region_copy, &bounds);
-      meta_shaped_texture_set_clip_region (stex, clip_region_copy);
+      meta_shaped_texture_set_clip_region (texture, clip_region_copy);
     }
   else
     {
-      meta_shaped_texture_set_clip_region (stex, clip_region);
+      meta_shaped_texture_set_clip_region (texture, clip_region);
     }
 }
 
@@ -227,7 +233,30 @@ static gboolean
 meta_surface_actor_get_paint_volume (ClutterActor       *actor,
                                      ClutterPaintVolume *volume)
 {
-  return clutter_paint_volume_set_from_allocation (volume, actor);
+  MetaSurfaceActor *surface_actor = META_SURFACE_ACTOR (actor);
+  MetaSurfaceActorPrivate *priv =
+    meta_surface_actor_get_instance_private (surface_actor);
+
+  if (!clutter_paint_volume_set_from_allocation (volume, actor))
+    return FALSE;
+
+  if (priv->background_blur_sample_region)
+    {
+      MtkRectangle sample_rect;
+      ClutterActorBox sample_box;
+
+      sample_rect = mtk_region_get_extents (priv->background_blur_sample_region);
+      sample_box = (ClutterActorBox) {
+        .x1 = sample_rect.x,
+        .y1 = sample_rect.y,
+        .x2 = sample_rect.x + sample_rect.width,
+        .y2 = sample_rect.y + sample_rect.height,
+      };
+
+      clutter_paint_volume_union_box (volume, &sample_box);
+    }
+
+  return TRUE;
 }
 
 static void
@@ -271,14 +300,16 @@ meta_surface_actor_constructed (GObject *object)
     clutter_actor_get_context (CLUTTER_ACTOR (surface_actor));
   ClutterColorState *color_state =
     clutter_actor_get_color_state (CLUTTER_ACTOR (surface_actor));
+  MetaShapedTexture *texture;
 
   priv->is_obscured = TRUE;
-  priv->texture = meta_shaped_texture_new (clutter_context, color_state);
-  g_signal_connect_object (priv->texture, "size-changed",
+  priv->content = meta_surface_content_new (clutter_context, color_state);
+  texture = meta_surface_content_get_texture (priv->content);
+  g_signal_connect_object (texture, "size-changed",
                            G_CALLBACK (texture_size_changed), surface_actor,
                            G_CONNECT_DEFAULT);
   clutter_actor_set_content (CLUTTER_ACTOR (surface_actor),
-                             CLUTTER_CONTENT (priv->texture));
+                             CLUTTER_CONTENT (priv->content));
   clutter_actor_set_request_mode (CLUTTER_ACTOR (surface_actor),
                                   CLUTTER_REQUEST_CONTENT_SIZE);
 
@@ -294,7 +325,12 @@ meta_surface_actor_dispose (GObject *object)
 
   g_clear_pointer (&priv->pending_damage, mtk_region_unref);
   g_clear_pointer (&priv->input_region, mtk_region_unref);
-  g_clear_object (&priv->texture);
+  g_clear_pointer (&priv->background_blur,
+                   meta_background_blur_destroy);
+  g_clear_pointer (&priv->background_blur_region, mtk_region_unref);
+  g_clear_pointer (&priv->background_blur_sample_region, mtk_region_unref);
+  clutter_actor_set_content (CLUTTER_ACTOR (self), NULL);
+  g_clear_object (&priv->content);
 
   set_unobscured_region (self, NULL);
 
@@ -366,12 +402,21 @@ subtract_opaque_region (MetaSurfaceActor *surface_actor,
 
   if (opacity == 0xff)
     {
+      MetaShapedTexture *texture = meta_surface_actor_get_texture (surface_actor);
       MtkRegion *opaque_region;
+      g_autoptr (MtkRegion) effective_opaque_region = NULL;
 
-      opaque_region = meta_shaped_texture_get_opaque_region (priv->texture);
-
+      opaque_region = meta_shaped_texture_get_opaque_region (texture);
       if (!opaque_region)
         return;
+
+      if (priv->background_blur_sample_region)
+        {
+          effective_opaque_region = mtk_region_copy (opaque_region);
+          mtk_region_subtract (effective_opaque_region,
+                               priv->background_blur_sample_region);
+          opaque_region = effective_opaque_region;
+        }
 
       mtk_region_subtract (region, opaque_region);
     }
@@ -407,8 +452,41 @@ cullable_iface_init (MetaCullableInterface *iface)
 }
 
 static void
-meta_surface_actor_init (MetaSurfaceActor *self)
+sync_background_blur (MetaSurfaceActor *surface_actor)
 {
+  MetaSurfaceActorPrivate *priv =
+    meta_surface_actor_get_instance_private (surface_actor);
+  ClutterActor *actor = CLUTTER_ACTOR (surface_actor);
+
+  g_clear_pointer (&priv->background_blur,
+                   meta_background_blur_destroy);
+
+  if (!priv->background_blur_sample_region)
+    return;
+
+  if (!clutter_actor_is_mapped (actor))
+    return;
+
+  priv->background_blur =
+    meta_background_blur_new (actor,
+                              priv->background_blur_sample_region);
+}
+
+static void
+background_blur_mapped_changed (MetaSurfaceActor *surface_actor,
+                                GParamSpec       *pspec,
+                                gpointer          user_data)
+{
+  sync_background_blur (surface_actor);
+}
+
+static void
+meta_surface_actor_init (MetaSurfaceActor *surface_actor)
+{
+  g_signal_connect (surface_actor,
+                    "notify::mapped",
+                    G_CALLBACK (background_blur_mapped_changed),
+                    NULL);
 }
 
 MetaShapedTexture *
@@ -417,7 +495,10 @@ meta_surface_actor_get_texture (MetaSurfaceActor *self)
   MetaSurfaceActorPrivate *priv =
     meta_surface_actor_get_instance_private (self);
 
-  return priv->texture;
+  if (!priv->content)
+    return NULL;
+
+  return meta_surface_content_get_texture (priv->content);
 }
 
 void
@@ -438,12 +519,11 @@ void
 meta_surface_actor_update_area (MetaSurfaceActor   *self,
                                 const MtkRectangle *area)
 {
-  MetaSurfaceActorPrivate *priv =
-    meta_surface_actor_get_instance_private (self);
+  MetaShapedTexture *texture = meta_surface_actor_get_texture (self);
   gboolean repaint_scheduled = FALSE;
   MtkRectangle clip;
 
-  if (meta_shaped_texture_update_area (priv->texture, area, &clip))
+  if (meta_shaped_texture_update_area (texture, area, &clip))
     {
       MtkRegion *unobscured_region;
 
@@ -518,9 +598,8 @@ meta_surface_actor_is_obscured_on_stage_view (MetaSurfaceActor *self,
 
   if (unobscured_region)
     {
-      MetaSurfaceActorPrivate *priv =
-        meta_surface_actor_get_instance_private (self);
       ClutterActor *stage = clutter_actor_get_stage (CLUTTER_ACTOR (self));
+      MetaShapedTexture *texture = meta_surface_actor_get_texture (self);
       g_autoptr (MtkRegion) intersection_region = NULL;
       MtkRectangle stage_rect;
       graphene_matrix_t transform;
@@ -548,7 +627,7 @@ meta_surface_actor_is_obscured_on_stage_view (MetaSurfaceActor *self,
       else if (!unobscurred_fraction)
         return FALSE;
 
-      clutter_content_get_preferred_size (CLUTTER_CONTENT (priv->texture),
+      clutter_content_get_preferred_size (CLUTTER_CONTENT (texture),
                                           &bounds_width,
                                           &bounds_height);
       graphene_rect_init (&actor_bounds, 0, 0, bounds_width, bounds_height);
@@ -575,6 +654,25 @@ meta_surface_actor_is_obscured_on_stage_view (MetaSurfaceActor *self,
                                                       stage_view);
 }
 
+static void
+queue_redraw_for_region (MetaSurfaceActor *surface_actor,
+                         MtkRegion        *region)
+{
+  int n_rects;
+
+  if (!region)
+    return;
+
+  n_rects = mtk_region_num_rectangles (region);
+  for (int i = 0; i < n_rects; i++)
+    {
+      MtkRectangle rect;
+
+      rect = mtk_region_get_rectangle (region, i);
+      clutter_actor_queue_redraw_with_clip (CLUTTER_ACTOR (surface_actor), &rect);
+    }
+}
+
 void
 meta_surface_actor_set_input_region (MetaSurfaceActor *self,
                                      MtkRegion        *region)
@@ -594,10 +692,72 @@ void
 meta_surface_actor_set_opaque_region (MetaSurfaceActor *self,
                                       MtkRegion        *region)
 {
-  MetaSurfaceActorPrivate *priv =
-    meta_surface_actor_get_instance_private (self);
+  MetaShapedTexture *texture = meta_surface_actor_get_texture (self);
 
-  meta_shaped_texture_set_opaque_region (priv->texture, region);
+  meta_shaped_texture_set_opaque_region (texture, region);
+}
+
+void
+meta_surface_actor_set_background_blur_region (MetaSurfaceActor *surface_actor,
+                                               MtkRegion        *region)
+{
+  MetaSurfaceActorPrivate *priv =
+    meta_surface_actor_get_instance_private (surface_actor);
+
+  if (region && mtk_region_is_empty (region))
+    region = NULL;
+
+  if (mtk_region_equal (priv->background_blur_region, region))
+    return;
+
+  queue_redraw_for_region (surface_actor, priv->background_blur_sample_region);
+  g_clear_pointer (&priv->background_blur,
+                   meta_background_blur_destroy);
+
+  g_clear_pointer (&priv->background_blur_region, mtk_region_unref);
+  g_clear_pointer (&priv->background_blur_sample_region, mtk_region_unref);
+  if (region)
+    {
+      priv->background_blur_region = mtk_region_ref (region);
+      priv->background_blur_sample_region =
+        meta_background_effect_create_blur_sample_region (region,
+                                                          BACKGROUND_EFFECT_BLUR_RADIUS);
+    }
+
+  sync_background_blur (surface_actor);
+
+  clutter_actor_invalidate_paint_volume (CLUTTER_ACTOR (surface_actor));
+  queue_redraw_for_region (surface_actor, priv->background_blur_sample_region);
+}
+
+void
+meta_surface_actor_paint_background_effects (MetaSurfaceActor    *surface_actor,
+                                             ClutterPaintNode    *root_node,
+                                             ClutterPaintContext *paint_context,
+                                             ClutterActorBox     *content_box,
+                                             int                  content_width,
+                                             int                  content_height,
+                                             MtkRegion           *clip_region,
+                                             uint8_t              opacity)
+{
+  MetaSurfaceActorPrivate *priv =
+    meta_surface_actor_get_instance_private (surface_actor);
+
+  if (!priv->background_blur_region)
+    return;
+
+  meta_background_effect_paint_blur_region (root_node,
+                                            CLUTTER_ACTOR (surface_actor),
+                                            paint_context,
+                                            content_box,
+                                            content_width,
+                                            content_height,
+                                            priv->background_blur_region,
+                                            clip_region,
+                                            BACKGROUND_EFFECT_BLUR_RADIUS,
+                                            BACKGROUND_EFFECT_SATURATION,
+                                            BACKGROUND_EFFECT_NOISE,
+                                            opacity);
 }
 
 void
