@@ -998,6 +998,7 @@ struct _ClutterLayerNode
   CoglFramebuffer *offscreen;
 
   guint8 opacity;
+  gboolean skip_color_state_transform;
 };
 
 struct _ClutterLayerNodeClass
@@ -1056,7 +1057,8 @@ clutter_layer_node_post_draw (ClutterPaintNode    *node,
 
   fb = clutter_paint_context_get_framebuffer (paint_context);
 
-  if (!cogl_pipeline_has_capability (lnode->pipeline,
+  if (!lnode->skip_color_state_transform &&
+      !cogl_pipeline_has_capability (lnode->pipeline,
                                      CLUTTER_PIPELINE_CAPABILITY,
                                      CLUTTER_PIPELINE_CAPABILITY_COLOR_STATE))
     {
@@ -1361,9 +1363,69 @@ struct _ClutterBlurNode
   ClutterLayerNode parent_instance;
 
   ClutterBlur *blur;
+  CoglFramebuffer *source_framebuffer;
+  int source_x;
+  int source_y;
+  int source_width;
+  int source_height;
 };
 
 G_DEFINE_TYPE (ClutterBlurNode, clutter_blur_node, CLUTTER_TYPE_LAYER_NODE)
+
+static const char *blur_framebuffer_effect_declarations =
+  "uniform float blur_framebuffer_saturation;                               \n"
+  "uniform float blur_framebuffer_noise;                                    \n"
+  "                                                                          \n"
+  "float blur_framebuffer_random_noise (vec2 position)                       \n"
+  "{                                                                         \n"
+  "  return fract (sin (dot (position, vec2 (12.9898, 78.233))) *           \n"
+  "                43758.5453);                                             \n"
+  "}                                                                         \n";
+
+static const char *blur_framebuffer_effect_source =
+  "  if (cogl_color_out.a > 0.0)                                             \n"
+  "    {                                                                     \n"
+  "      vec3 color = cogl_color_out.rgb / cogl_color_out.a;                 \n"
+  "      float luma = dot (color, vec3 (0.299, 0.587, 0.114));               \n"
+  "      float grain =                                                     \n"
+  "        blur_framebuffer_random_noise (floor (gl_FragCoord.xy)) - 0.5;   \n"
+  "                                                                          \n"
+  "      color = mix (vec3 (luma), color, blur_framebuffer_saturation);      \n"
+  "      color += vec3 (grain * blur_framebuffer_noise);                     \n"
+  "      color = clamp (color, vec3 (0.0), vec3 (1.0));                      \n"
+  "                                                                          \n"
+  "      cogl_color_out.rgb = color * cogl_color_out.a;                      \n"
+  "    }                                                                     \n";
+
+static void
+add_blur_framebuffer_effect (CoglPipeline *pipeline,
+                             float         saturation,
+                             float         noise)
+{
+  CoglSnippet *snippet;
+  int saturation_uniform;
+  int noise_uniform;
+
+  if (saturation == 1.0f && noise == 0.0f)
+    return;
+
+  snippet = cogl_snippet_new (COGL_SNIPPET_HOOK_FRAGMENT,
+                              blur_framebuffer_effect_declarations,
+                              blur_framebuffer_effect_source);
+  cogl_pipeline_add_snippet (pipeline, snippet);
+  g_object_unref (snippet);
+
+  saturation_uniform =
+    cogl_pipeline_get_uniform_location (pipeline,
+                                        "blur_framebuffer_saturation");
+  if (saturation_uniform > -1)
+    cogl_pipeline_set_uniform_1f (pipeline, saturation_uniform, saturation);
+
+  noise_uniform =
+    cogl_pipeline_get_uniform_location (pipeline, "blur_framebuffer_noise");
+  if (noise_uniform > -1)
+    cogl_pipeline_set_uniform_1f (pipeline, noise_uniform, noise);
+}
 
 static void
 clutter_blur_node_post_draw (ClutterPaintNode    *node,
@@ -1372,8 +1434,30 @@ clutter_blur_node_post_draw (ClutterPaintNode    *node,
   ClutterPaintNodeClass *parent_class =
     CLUTTER_PAINT_NODE_CLASS (clutter_blur_node_parent_class);
   ClutterBlurNode *blur_node = CLUTTER_BLUR_NODE (node);
+  gboolean should_blur = TRUE;
 
-  clutter_blur_apply (blur_node->blur);
+  if (blur_node->source_framebuffer)
+    {
+      ClutterLayerNode *layer_node = CLUTTER_LAYER_NODE (node);
+      g_autoptr (GError) error = NULL;
+
+      should_blur =
+        cogl_framebuffer_blit (blur_node->source_framebuffer,
+                               layer_node->offscreen,
+                               blur_node->source_x,
+                               blur_node->source_y,
+                               0,
+                               0,
+                               blur_node->source_width,
+                               blur_node->source_height,
+                               &error);
+      if (!should_blur)
+        g_warning ("Failed to capture blur node framebuffer: %s",
+                   error->message);
+    }
+
+  if (should_blur)
+    clutter_blur_apply (blur_node->blur);
 
   parent_class->post_draw (node, paint_context);
 }
@@ -1384,6 +1468,7 @@ clutter_blur_node_finalize (ClutterPaintNode *node)
   ClutterBlurNode *blur_node = CLUTTER_BLUR_NODE (node);
 
   g_clear_pointer (&blur_node->blur, clutter_blur_free);
+  g_clear_object (&blur_node->source_framebuffer);
 
   CLUTTER_PAINT_NODE_CLASS (clutter_blur_node_parent_class)->finalize (node);
 }
@@ -1476,4 +1561,68 @@ clutter_blur_node_new (unsigned int width,
 
 out:
   return (ClutterPaintNode *) blur_node;
+}
+
+/**
+ * clutter_blur_node_new_from_framebuffer:
+ * @framebuffer: the source framebuffer
+ * @src_x: source x position in [method@Cogl.Framebuffer.blit] coordinates
+ * @src_y: source y position in [method@Cogl.Framebuffer.blit] coordinates
+ * @width: width of the source region
+ * @height: height of the source region
+ * @radius: radius (in pixels) of the blur
+ * @saturation: saturation multiplier to apply after blurring
+ * @noise: noise amount to apply after blurring
+ * @opacity: opacity to paint the blurred contents with
+ *
+ * Creates a new #ClutterBlurNode that captures a source framebuffer region
+ * instead of rendering child nodes into the blur layer.
+ *
+ * Return value: (transfer full): the newly created #ClutterBlurNode.
+ *   Use clutter_paint_node_unref() when done.
+ */
+ClutterPaintNode *
+clutter_blur_node_new_from_framebuffer (CoglFramebuffer *framebuffer,
+                                        int              src_x,
+                                        int              src_y,
+                                        unsigned int     width,
+                                        unsigned int     height,
+                                        float            radius,
+                                        float            saturation,
+                                        float            noise,
+                                        uint8_t          opacity)
+{
+  ClutterPaintNode *node;
+  ClutterBlurNode *blur_node;
+  ClutterLayerNode *layer_node;
+  CoglColor color;
+  float opacity_f;
+
+  g_return_val_if_fail (COGL_IS_FRAMEBUFFER (framebuffer), NULL);
+  g_return_val_if_fail (width > 0, NULL);
+  g_return_val_if_fail (height > 0, NULL);
+  g_return_val_if_fail (radius >= 0.0, NULL);
+  g_return_val_if_fail (saturation >= 0.0, NULL);
+  g_return_val_if_fail (noise >= 0.0, NULL);
+
+  node = clutter_blur_node_new (width, height, radius);
+  if (!node)
+    return NULL;
+
+  blur_node = CLUTTER_BLUR_NODE (node);
+  blur_node->source_framebuffer = g_object_ref (framebuffer);
+  blur_node->source_x = src_x;
+  blur_node->source_y = src_y;
+  blur_node->source_width = width;
+  blur_node->source_height = height;
+
+  layer_node = CLUTTER_LAYER_NODE (blur_node);
+  layer_node->skip_color_state_transform = TRUE;
+  add_blur_framebuffer_effect (layer_node->pipeline, saturation, noise);
+
+  opacity_f = opacity / 255.0f;
+  cogl_color_init_from_4f (&color, opacity_f, opacity_f, opacity_f, opacity_f);
+  cogl_pipeline_set_color (layer_node->pipeline, &color);
+
+  return node;
 }

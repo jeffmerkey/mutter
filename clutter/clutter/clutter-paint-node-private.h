@@ -107,6 +107,17 @@ ClutterPaintNode *      _clutter_dummy_node_new                         (Clutter
 G_GNUC_INTERNAL
 guint                   clutter_paint_node_get_n_children               (ClutterPaintNode      *node);
 
+CLUTTER_EXPORT
+ClutterPaintNode * clutter_blur_node_new_from_framebuffer          (CoglFramebuffer       *framebuffer,
+                                                                    int                    src_x,
+                                                                    int                    src_y,
+                                                                    unsigned int           width,
+                                                                    unsigned int           height,
+                                                                    float                  radius,
+                                                                    float                  saturation,
+                                                                    float                  noise,
+                                                                    uint8_t                opacity);
+
 #define CLUTTER_TYPE_EFFECT_NODE                (clutter_effect_node_get_type ())
 #define CLUTTER_EFFECT_NODE(obj)                (G_TYPE_CHECK_INSTANCE_CAST ((obj), CLUTTER_TYPE_EFFECT_NODE, ClutterEffectNode))
 #define CLUTTER_IS_EFFECT_NODE(obj)             (G_TYPE_CHECK_INSTANCE_TYPE ((obj), CLUTTER_TYPE_EFFECT_NODE))
