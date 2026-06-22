@@ -383,9 +383,10 @@ meta_display_class_init (MetaDisplayClass *klass)
                   G_SIGNAL_RUN_LAST,
                   0,
                   NULL, NULL, NULL,
-                  G_TYPE_NONE, 2,
+                  G_TYPE_NONE, 3,
                   META_TYPE_WINDOW,
-                  META_TYPE_GRAB_OP);
+                  META_TYPE_GRAB_OP,
+                  CLUTTER_TYPE_SPRITE);
 
   display_signals[GRAB_OP_END] =
     g_signal_new ("grab-op-end",

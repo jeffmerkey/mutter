@@ -2074,7 +2074,7 @@ meta_window_drag_begin (MetaWindowDrag      *window_drag,
            window_drag->initial_window_pos.height,
            0, 1);
 
-  g_signal_emit_by_name (display, "grab-op-begin", grab_window, grab_op);
+  g_signal_emit_by_name (display, "grab-op-begin", grab_window, grab_op, sprite);
 
   meta_window_grab_op_began (grab_window, grab_op);
 
