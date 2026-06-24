@@ -188,6 +188,9 @@ typedef struct _ClutterTextPrivate
   ClutterAction *click_gesture;
   ClutterAction *key_controller;
 
+  ClutterAction *key_interception_controller;
+  ClutterActor *key_input_interceptor;
+
   ClutterInputFocus *input_focus;
   ClutterInputContentHintFlags input_hints;
   ClutterInputContentPurpose input_purpose;
@@ -252,6 +255,7 @@ enum
   PROP_SELECTED_TEXT_COLOR_SET,
   PROP_INPUT_HINTS,
   PROP_INPUT_PURPOSE,
+  PROP_INPUT_INTERCEPTOR,
 
   PROP_LAST
 };
@@ -484,6 +488,7 @@ clutter_text_input_focus_set_preedit_text (ClutterInputFocus       *focus,
 
       attr_list = translate_preedit_attributes (clutter_text,
                                                 style_hints, n_style_hints);
+      clutter_actor_grab_key_focus (CLUTTER_ACTOR (clutter_text));
       clutter_text_set_preedit_string (clutter_text, preedit_text,
                                        attr_list, cursor_pos);
     }
@@ -1735,6 +1740,10 @@ clutter_text_set_property (GObject      *gobject,
       clutter_text_set_input_hints (self, g_value_get_enum (value));
       break;
 
+    case PROP_INPUT_INTERCEPTOR:
+      clutter_text_set_input_interceptor (self, g_value_get_object (value));
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (gobject, prop_id, pspec);
     }
@@ -1879,6 +1888,10 @@ clutter_text_get_property (GObject    *gobject,
       g_value_set_enum (value, priv->input_hints);
       break;
 
+    case PROP_INPUT_INTERCEPTOR:
+      g_value_set_object (value, priv->key_input_interceptor);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (gobject, prop_id, pspec);
     }
@@ -1937,6 +1950,7 @@ clutter_text_dispose (GObject *gobject)
   g_clear_handle_id (&priv->password_hint_id, g_source_remove);
 
   clutter_text_set_buffer (self, NULL);
+  clutter_text_set_input_interceptor (self, NULL);
 
   G_OBJECT_CLASS (clutter_text_parent_class)->dispose (gobject);
 }
@@ -1962,6 +1976,7 @@ clutter_text_finalize (GObject *gobject)
   g_free (priv->font_name);
 
   g_clear_object (&priv->input_focus);
+  g_clear_object (&priv->key_interception_controller);
 
   G_OBJECT_CLASS (clutter_text_parent_class)->finalize (gobject);
 }
@@ -2963,7 +2978,13 @@ clutter_text_im_focus (ClutterText *text)
   ClutterBackend *backend = clutter_context_get_backend (context);
   ClutterInputMethod *method = clutter_backend_get_input_method (backend);
 
+  if (!priv->editable)
+    return;
+
   if (!method)
+    return;
+
+  if (clutter_input_focus_is_focused (priv->input_focus))
     return;
 
   clutter_input_method_focus_in (method, priv->input_focus);
@@ -2978,13 +2999,28 @@ clutter_text_im_focus (ClutterText *text)
 }
 
 static void
+clutter_text_im_unfocus (ClutterText *text)
+{
+  ClutterTextPrivate *priv =
+    clutter_text_get_instance_private (text);
+  ClutterContext *context = clutter_actor_get_context (CLUTTER_ACTOR (text));
+  ClutterBackend *backend = clutter_context_get_backend (context);
+  ClutterInputMethod *method = clutter_backend_get_input_method (backend);
+
+  if (priv->editable && clutter_input_focus_is_focused (priv->input_focus))
+    {
+      clutter_input_focus_reset (priv->input_focus);
+      clutter_input_method_focus_out (method);
+    }
+}
+
+static void
 clutter_text_key_focus_in (ClutterActor *actor)
 {
   ClutterText *text = CLUTTER_TEXT (actor);
   ClutterTextPrivate *priv = clutter_text_get_instance_private (text);
 
-  if (priv->editable)
-    clutter_text_im_focus (text);
+  clutter_text_im_focus (text);
 
   priv->has_focus = TRUE;
 
@@ -2996,17 +3032,10 @@ clutter_text_key_focus_out (ClutterActor *actor)
 {
   ClutterTextPrivate *priv =
     clutter_text_get_instance_private (CLUTTER_TEXT (actor));
-  ClutterContext *context = clutter_actor_get_context (actor);
-  ClutterBackend *backend = clutter_context_get_backend (context);
-  ClutterInputMethod *method = clutter_backend_get_input_method (backend);
+
+  clutter_text_im_unfocus (CLUTTER_TEXT (actor));
 
   priv->has_focus = FALSE;
-
-  if (priv->editable && clutter_input_focus_is_focused (priv->input_focus))
-    {
-      clutter_input_focus_reset (priv->input_focus);
-      clutter_input_method_focus_out (method);
-    }
 
   clutter_text_queue_redraw (actor);
 }
@@ -4105,6 +4134,13 @@ clutter_text_class_init (ClutterTextClass *klass)
   obj_props[PROP_INPUT_PURPOSE] = pspec;
   g_object_class_install_property (gobject_class, PROP_INPUT_PURPOSE, pspec);
 
+  pspec = g_param_spec_object ("input-interceptor", NULL, NULL,
+                               CLUTTER_TYPE_ACTOR,
+                               G_PARAM_READWRITE |
+                               G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_INPUT_INTERCEPTOR] = pspec;
+  g_object_class_install_property (gobject_class, PROP_SELECTED_TEXT_COLOR_SET, pspec);
+
   /**
    * ClutterText::text-changed:
    * @self: the #ClutterText that emitted the signal
@@ -4835,7 +4871,7 @@ clutter_text_set_editable (ClutterText *self,
       if (method)
         {
           if (!priv->editable && clutter_input_focus_is_focused (priv->input_focus))
-            clutter_input_method_focus_out (method);
+            clutter_text_im_unfocus (self);
           else if (priv->has_focus)
             clutter_text_im_focus (self);
         }
@@ -6737,4 +6773,115 @@ clutter_text_has_preedit (ClutterText *self)
 
   priv = clutter_text_get_instance_private (self);
   return priv->preedit_set;
+}
+
+static void
+on_key_input_interceptor_focus_in (ClutterText *self)
+{
+  clutter_text_im_focus (self);
+}
+
+static void
+on_key_input_interceptor_focus_out (ClutterText *self)
+{
+  clutter_text_im_unfocus (self);
+}
+
+static void
+on_intercepted_key_pressed (ClutterKeyController *key_controller,
+                            ClutterText          *self)
+{
+  gunichar unicode;
+
+  if (!clutter_key_controller_get_key (key_controller, NULL, NULL, &unicode))
+    return;
+  if (!g_unichar_isgraph (unicode))
+    return;
+
+  clutter_actor_grab_key_focus (CLUTTER_ACTOR (self));
+  on_key_controller_key_pressed (key_controller, self);
+}
+
+/**
+ * clutter_text_set_input_interceptor:
+ * @self: a `ClutterText`
+ * @input_interceptor: (nullable): the actor that will intercept keyboard input
+ *
+ * Delegates input handling on an actor, so that events handled
+ * by @input_interceptro will result on @self being focused and
+ * handling input.
+ **/
+void
+clutter_text_set_input_interceptor (ClutterText  *self,
+                                    ClutterActor *input_interceptor)
+{
+  ClutterTextPrivate *priv;
+
+  g_return_if_fail (CLUTTER_IS_TEXT (self));
+
+  priv = clutter_text_get_instance_private (self);
+
+  if (priv->key_input_interceptor == input_interceptor)
+    return;
+
+  if (priv->key_input_interceptor)
+    {
+      if (clutter_actor_has_key_focus (priv->key_input_interceptor))
+        clutter_text_im_unfocus (self);
+
+      g_signal_handlers_disconnect_by_data (priv->key_input_interceptor, self);
+      clutter_actor_remove_action (priv->key_input_interceptor,
+                                   priv->key_interception_controller);
+    }
+
+  g_set_object (&priv->key_input_interceptor, input_interceptor);
+
+  if (input_interceptor)
+    {
+      g_signal_connect_swapped (input_interceptor, "key-focus-in",
+                                G_CALLBACK (on_key_input_interceptor_focus_in),
+                                self);
+      g_signal_connect_swapped (input_interceptor, "key-focus-in",
+                                G_CALLBACK (on_key_input_interceptor_focus_out),
+                                self);
+
+      if (!priv->key_interception_controller)
+        {
+          priv->key_interception_controller =
+            clutter_key_controller_new (priv->input_focus);
+          g_signal_connect (priv->key_interception_controller,
+                            "key-press",
+                            G_CALLBACK (on_intercepted_key_pressed),
+                            self);
+          g_object_ref_sink (priv->key_interception_controller);
+        }
+
+      clutter_actor_add_action (input_interceptor,
+                                priv->key_interception_controller);
+
+      if (clutter_actor_has_key_focus (input_interceptor))
+        clutter_text_im_focus (self);
+    }
+
+  g_object_notify_by_pspec (G_OBJECT (self), obj_props[PROP_INPUT_INTERCEPTOR]);
+}
+
+/**
+ * clutter_text_get_input_interceptor:
+ * @self: a `ClutterText`
+ *
+ * Gets the actor used for intercepting keyboard input.
+ *
+ * Returns: (transfer none): the keyboard input intercepting actor
+ **/
+ClutterActor *
+clutter_text_get_input_interceptor (ClutterText *self)
+{
+  ClutterTextPrivate *priv;
+
+  g_return_val_if_fail (CLUTTER_IS_TEXT (self), NULL);
+
+  priv = clutter_text_get_instance_private (self);
+
+  return priv->key_input_interceptor;
 }

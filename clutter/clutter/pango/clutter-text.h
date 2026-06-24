@@ -286,4 +286,11 @@ ClutterInputContentPurpose clutter_text_get_input_purpose (ClutterText *self);
 CLUTTER_EXPORT
 gboolean              clutter_text_has_preedit (ClutterText *self);
 
+CLUTTER_EXPORT
+void clutter_text_set_input_interceptor (ClutterText  *self,
+                                         ClutterActor *input_interceptor);
+
+CLUTTER_EXPORT
+ClutterActor * clutter_text_get_input_interceptor (ClutterText *self);
+
 G_END_DECLS
