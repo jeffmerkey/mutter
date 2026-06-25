@@ -133,6 +133,7 @@ clutter_scroll_controller_handle_event (ClutterAction      *action,
         clutter_scroll_controller_reset_accumulated (scroll_controller);
 
       scroll_controller->current_sprite = sprite;
+      scroll_controller->current_scroll_source = scroll_source;
 
       switch (scroll_dir)
         {
