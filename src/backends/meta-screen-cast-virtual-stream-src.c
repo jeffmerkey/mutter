@@ -615,10 +615,18 @@ meta_screen_cast_virtual_stream_src_set_cursor_metadata (MetaScreenCastStreamSrc
   MetaScreenCastVirtualStreamSrc *virtual_src =
     META_SCREEN_CAST_VIRTUAL_STREAM_SRC (src);
   MetaBackend *backend = backend_from_src (src);
-  MetaCursorRenderer *cursor_renderer =
-    meta_backend_get_cursor_renderer (backend);
+  MetaCursorRenderer *cursor_renderer;
   ClutterCursor *cursor;
   int x, y;
+
+  cursor_renderer = meta_backend_get_cursor_renderer (backend);
+  if (!cursor_renderer)
+    {
+      virtual_src->last_cursor_matadata.set = FALSE;
+      meta_screen_cast_stream_src_unset_cursor_metadata (src,
+                                                         spa_meta_cursor);
+      return;
+    }
 
   cursor = meta_cursor_renderer_get_cursor (cursor_renderer);
 
