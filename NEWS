@@ -1,3 +1,20 @@
+50.3
+====
+* Fix erroneous stack order changes on workspace switches [AnonymouX47; !4992]
+* De-prioritize focusing desktop windows [Marco; !5016]
+* Ensure preferred_scale event is sent to clients [Michel; !5103]
+* Fix incorrect accumulated damage in screencasts [Michel; !5046, !5119]
+* Fix triggering OSK for text_input_v3 version 1 clients [Sebastian; !5117]
+* Fixed crashes [Jonas, Zander, Jonas, Sundeep; !5097, !5107, !5143,
+  !5153, !5151]
+* Misc. bug fixes and cleanups [Carlos, Jonas, Andre, Michel, Marius, Michael;
+  !5096, !5107, !5108, !5118, !5127, !5134, !5126, !5102]
+
+Contributors:
+  AnonymouX47, Zander Brown, Michael Catanzaro, Marius Cirsta, Michel Dänzer,
+  Carlos Garnacho, Sebastian Keller, Sundeep Mediratta, Andre Nijman,
+  Marco Trevisan (Treviño), Jonas Ådahl
+
 50.2
 ====
 * Fix size increases when quickly unmaximizing window by drag [Jonas; !4856]
