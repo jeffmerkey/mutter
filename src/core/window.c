@@ -4096,6 +4096,7 @@ meta_window_update_for_monitors_changed (MetaWindow *window)
     {
       meta_window_update_monitor (window,
                                   META_WINDOW_UPDATE_MONITOR_FLAGS_FORCE);
+      g_set_object (&window->target_monitor, window->monitor);
       goto out;
     }
 
