@@ -35,8 +35,6 @@ MetaCursorXcursor * meta_cursor_xcursor_get (ClutterCursorType  cursor_type,
 void meta_cursor_xcursor_set_theme_scale (MetaCursorXcursor *sprite_xcursor,
                                           int                scale);
 
-ClutterCursorType meta_cursor_xcursor_get_cursor (MetaCursorXcursor *sprite_xcursor);
-
 XcursorImage * meta_cursor_xcursor_get_current_image (MetaCursorXcursor *sprite_xcursor);
 
 void meta_cursor_xcursor_get_scaled_image_size (MetaCursorXcursor *sprite_xcursor,

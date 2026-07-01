@@ -373,10 +373,7 @@ meta_cursor_renderer_native_update_cursor (MetaCursorRenderer *cursor_renderer,
       return FALSE;
     }
 
-  if (cursor &&
-      META_IS_CURSOR_XCURSOR (cursor) &&
-      meta_cursor_xcursor_get_cursor (META_CURSOR_XCURSOR (cursor)) ==
-      CLUTTER_CURSOR_NONE)
+  if (cursor && clutter_cursor_get_cursor_type (cursor) == CLUTTER_CURSOR_NONE)
     cursor = NULL;
 
   cursor_changed = priv->current_cursor != cursor;

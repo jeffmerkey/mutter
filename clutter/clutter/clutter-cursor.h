@@ -57,3 +57,6 @@ struct _ClutterCursorClass
                        int            x,
                        int            y);
 };
+
+CLUTTER_EXPORT
+ClutterCursorType clutter_cursor_get_cursor_type (ClutterCursor *cursor);

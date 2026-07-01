@@ -21,6 +21,7 @@
 
 #include "clutter-color-state.h"
 #include "clutter-cursor-private.h"
+#include "clutter-enum-types.h"
 
 #include "cogl/cogl.h"
 
@@ -28,6 +29,7 @@ enum
 {
   PROP_0,
   PROP_COLOR_STATE,
+  PROP_CURSOR_TYPE,
   N_PROPS
 };
 
@@ -52,6 +54,7 @@ typedef struct _ClutterCursorPrivate
   gboolean has_viewport_dst_size;
   int viewport_dst_width;
   int viewport_dst_height;
+  ClutterCursorType cursor_type;
 
   ClutterColorState *color_state;
 } ClutterCursorPrivate;
@@ -299,6 +302,9 @@ clutter_cursor_set_property (GObject      *object,
     case PROP_COLOR_STATE:
       g_set_object (&priv->color_state, g_value_get_object (value));
       break;
+    case PROP_CURSOR_TYPE:
+      priv->cursor_type = g_value_get_enum (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -319,6 +325,13 @@ clutter_cursor_class_init (ClutterCursorClass *klass)
                          G_PARAM_WRITABLE |
                          G_PARAM_CONSTRUCT_ONLY |
                          G_PARAM_STATIC_STRINGS);
+  obj_props[PROP_CURSOR_TYPE] =
+    g_param_spec_enum ("cursor-type", NULL, NULL,
+                       CLUTTER_TYPE_CURSOR_TYPE,
+                       CLUTTER_CURSOR_INHERIT,
+                       G_PARAM_WRITABLE |
+                       G_PARAM_CONSTRUCT_ONLY |
+                       G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (object_class, N_PROPS, obj_props);
 
@@ -343,4 +356,13 @@ void
 clutter_cursor_emit_texture_changed (ClutterCursor *cursor)
 {
   g_signal_emit (cursor, signals[TEXTURE_CHANGED], 0);
+}
+
+ClutterCursorType
+clutter_cursor_get_cursor_type (ClutterCursor *cursor)
+{
+  ClutterCursorPrivate *priv =
+    clutter_cursor_get_instance_private (cursor);
+
+  return priv->cursor_type;
 }

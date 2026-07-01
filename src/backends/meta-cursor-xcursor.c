@@ -284,12 +284,6 @@ create_blank_cursor_images (void)
   return images;
 }
 
-ClutterCursorType
-meta_cursor_xcursor_get_cursor (MetaCursorXcursor *cursor_xcursor)
-{
-  return cursor_xcursor->cursor;
-}
-
 static XcursorImages *
 load_cursor_on_client (ClutterCursorType cursor,
                        int               scale)
@@ -455,8 +449,11 @@ load_cursor_from_theme (MetaCursorXcursor *cursor_xcursor)
 {
   XcursorImages *xcursor_images = NULL;
   unsigned int i;
+  ClutterCursorType cursor_type;
 
-  g_assert (cursor_xcursor->cursor != CLUTTER_CURSOR_INHERIT);
+  cursor_type = clutter_cursor_get_cursor_type (CLUTTER_CURSOR (cursor_xcursor));
+
+  g_assert (cursor_type != CLUTTER_CURSOR_INHERIT);
 
   for (i = 0; i < cursor_xcursor->cursor_images->len; i++)
     {
@@ -474,7 +471,7 @@ load_cursor_from_theme (MetaCursorXcursor *cursor_xcursor)
 
       new_cursor.scale = cursor_xcursor->theme_scale;
       new_cursor.xcursor_images =
-        load_cursor_on_client (cursor_xcursor->cursor,
+        load_cursor_on_client (cursor_type,
                                new_cursor.scale);
 
       xcursor_images = new_cursor.xcursor_images;
@@ -614,8 +611,8 @@ meta_cursor_xcursor_get (ClutterCursorType  cursor_type,
 
       cursor_xcursor = g_object_new (META_TYPE_CURSOR_XCURSOR,
                                      "color-state", color_state,
+                                     "cursor-type", cursor_type,
                                      NULL);
-      cursor_xcursor->cursor = cursor_type;
       cursor_xcursor->cursor_tracker = cursor_tracker;
 
       g_hash_table_insert (cache, GUINT_TO_POINTER (cursor_type),
