@@ -15,6 +15,7 @@ mutter_public_headers = [
   'meta-background-image.h',
   'meta-backlight.h',
   'meta-close-dialog.h',
+  'meta-cursor.h',
   'meta-cursor-tracker.h',
   'meta-context.h',
   'meta-debug.h',

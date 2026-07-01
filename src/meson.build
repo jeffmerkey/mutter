@@ -168,6 +168,7 @@ mutter_sources = [
   'backends/meta-crtc-mode.h',
   'backends/meta-crtc.c',
   'backends/meta-crtc.h',
+  'backends/meta-cursor.c',
   'backends/meta-cursor-renderer.c',
   'backends/meta-cursor-renderer.h',
   'backends/meta-cursor-xcursor.c',
