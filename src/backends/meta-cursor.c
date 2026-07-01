@@ -37,7 +37,10 @@ struct _MetaCursorPrivate
   MetaBackend *backend;
 };
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (MetaCursor, meta_cursor, CLUTTER_TYPE_CURSOR)
+G_DEFINE_ABSTRACT_TYPE_WITH_CODE (MetaCursor, meta_cursor, CLUTTER_TYPE_CURSOR,
+                                  G_ADD_PRIVATE (MetaCursor)
+                                  g_io_extension_point_set_required_type (g_io_extension_point_register (META_CURSOR_EXTENSION_POINT_NAME),
+                                                                          g_define_type_id))
 
 static void
 meta_cursor_set_property (GObject      *object,

@@ -114,6 +114,11 @@ meta_cursor_theme_init (MetaCursorTheme *cursor_theme)
 {
   cursor_theme->cursors =
     g_hash_table_new_full (NULL, NULL, NULL, (GDestroyNotify) g_object_unref);
+
+  /* Ensure GType of default cursor implementation, so it is registered
+   * as an extension.
+   */
+  g_type_ensure (META_TYPE_CURSOR_XCURSOR);
 }
 
 MetaCursorTheme *
@@ -135,11 +140,28 @@ meta_cursor_theme_get_cursor (MetaCursorTheme   *cursor_theme,
 
   if (!cursor)
     {
-      cursor = g_object_new (META_TYPE_CURSOR_XCURSOR,
-                             "color-state", cursor_theme->color_state,
-                             "cursor-type", cursor_type,
-                             "backend", cursor_theme->backend,
-                             NULL);
+      GIOExtensionPoint *ep;
+      GList *l;
+
+      ep = g_io_extension_point_lookup (META_CURSOR_EXTENSION_POINT_NAME);
+
+      for (l = g_io_extension_point_get_extensions (ep); l; l = l->next)
+        {
+          GIOExtension *extension = l->data;
+
+          cursor = g_object_new (g_io_extension_get_type (extension),
+                                 "color-state", cursor_theme->color_state,
+                                 "cursor-type", cursor_type,
+                                 "backend", cursor_theme->backend,
+                                 NULL);
+
+          g_assert (cursor != NULL);
+          break;
+        }
+
+      if (!cursor)
+        return NULL;
+
       g_hash_table_insert (cursor_theme->cursors,
                            GUINT_TO_POINTER (cursor_type),
                            cursor);

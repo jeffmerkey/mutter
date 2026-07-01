@@ -24,6 +24,8 @@
 #include "clutter/clutter.h"
 #include "meta/meta-backend.h"
 
+#define META_CURSOR_EXTENSION_POINT_NAME "meta-cursor"
+
 struct _MetaCursorClass
 {
   ClutterCursorClass parent_class;

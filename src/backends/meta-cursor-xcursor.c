@@ -52,8 +52,10 @@ struct _MetaCursorXcursor
   gboolean invalidated;
 };
 
-G_DEFINE_TYPE (MetaCursorXcursor, meta_cursor_xcursor,
-               META_TYPE_CURSOR)
+G_DEFINE_TYPE_WITH_CODE (MetaCursorXcursor, meta_cursor_xcursor,
+                         META_TYPE_CURSOR,
+                         g_io_extension_point_implement (META_CURSOR_EXTENSION_POINT_NAME,
+                                                         g_define_type_id, "xcursor", 0))
 
 const char *
 meta_cursor_get_name (ClutterCursorType cursor)
