@@ -173,6 +173,8 @@ mutter_sources = [
   'backends/meta-cursor-renderer.h',
   'backends/meta-cursor-xcursor.c',
   'backends/meta-cursor-xcursor.h',
+  'backends/meta-cursor-theme.c',
+  'backends/meta-cursor-theme.h',
   'backends/meta-cursor-tracker.c',
   'backends/meta-cursor-tracker-private.h',
   'backends/meta-dbus-access-checker.c',

@@ -56,7 +56,7 @@
 #include "backends/meta-barrier-private.h"
 #include "backends/meta-color-manager-private.h"
 #include "backends/meta-cursor-renderer.h"
-#include "backends/meta-cursor-xcursor.h"
+#include "backends/meta-cursor-theme.h"
 #include "backends/meta-cursor-tracker-private.h"
 #include "backends/meta-dbus-session-watcher.h"
 #include "backends/meta-idle-manager.h"
@@ -160,6 +160,7 @@ struct _MetaBackendPrivate
 #endif
   MetaInputCapture *input_capture;
   MetaA11yManager *a11y_manager;
+  MetaCursorTheme *cursor_theme;
 
 #ifdef HAVE_LIBWACOM
   WacomDeviceDatabase *wacom_db;
@@ -239,6 +240,7 @@ meta_backend_dispose (GObject *object)
   g_clear_object (&priv->a11y_manager);
   g_clear_object (&priv->dnd);
   g_clear_object (&priv->renderdoc);
+  g_clear_object (&priv->cursor_theme);
 
   g_clear_handle_id (&priv->device_update_idle_id, g_source_remove);
 
@@ -1253,6 +1255,9 @@ static void
 on_cursor_prefs_changed (MetaCursorTracker *cursor_tracker,
                          MetaBackend       *backend)
 {
+  MetaBackendPrivate *priv = meta_backend_get_instance_private (backend);
+
+  meta_cursor_theme_reset (priv->cursor_theme);
   update_cursors (backend);
 }
 
@@ -1355,6 +1360,8 @@ meta_backend_initable_init (GInitable     *initable,
   if (META_BACKEND_GET_CLASS (backend)->init_render &&
       !META_BACKEND_GET_CLASS (backend)->init_render (backend, error))
     return FALSE;
+
+  priv->cursor_theme = meta_cursor_theme_new (backend);
 
   init_stage (backend);
 
@@ -2175,7 +2182,7 @@ ClutterCursor *
 meta_backend_get_cursor (MetaBackend       *backend,
                          ClutterCursorType  cursor_type)
 {
-  MetaCursorTracker *cursor_tracker = meta_backend_get_cursor_tracker (backend);
+  MetaBackendPrivate *priv = meta_backend_get_instance_private (backend);
   ClutterCursorType global_cursor = CLUTTER_CURSOR_INHERIT;
 
   g_signal_emit (backend, signals[OVERRIDE_CURSOR], 0, &global_cursor);
@@ -2183,5 +2190,5 @@ meta_backend_get_cursor (MetaBackend       *backend,
   if (global_cursor != CLUTTER_CURSOR_INHERIT)
     cursor_type = global_cursor;
 
-  return CLUTTER_CURSOR (meta_cursor_xcursor_get (cursor_type, cursor_tracker));
+  return meta_cursor_theme_get_cursor (priv->cursor_theme, cursor_type);
 }

@@ -21,8 +21,6 @@
 #include "backends/meta-cursor-xcursor.h"
 
 #include "backends/meta-backend-private.h"
-#include "backends/meta-cursor-renderer.h"
-#include "backends/meta-cursor-tracker-private.h"
 #include "backends/meta-logical-monitor-private.h"
 #include "clutter/clutter.h"
 #include "cogl/cogl.h"
@@ -56,44 +54,6 @@ struct _MetaCursorXcursor
 
 G_DEFINE_TYPE (MetaCursorXcursor, meta_cursor_xcursor,
                META_TYPE_CURSOR)
-
-static void
-on_prefs_changed (ClutterCursor *cursor,
-                  gpointer       user_data)
-{
-  GHashTable *cache = user_data;
-
-  g_hash_table_remove_all (cache);
-}
-
-static GHashTable *
-ensure_cache (MetaCursorTracker *cursor_tracker)
-{
-  GHashTable *cache;
-  static GOnce quark_once = G_ONCE_INIT;
-
-  g_once (&quark_once, (GThreadFunc) g_quark_from_static_string,
-          (gpointer) "-meta-cursor-xcursor-cache");
-
-  cache = g_object_get_qdata (G_OBJECT (cursor_tracker),
-                              GPOINTER_TO_INT (quark_once.retval));
-  if (!cache)
-    {
-      cache = g_hash_table_new_full (NULL, NULL, NULL,
-                                     (GDestroyNotify) g_object_unref);
-
-      g_object_set_qdata_full (G_OBJECT (cursor_tracker),
-                               GPOINTER_TO_INT (quark_once.retval),
-                               cache,
-                               (GDestroyNotify) g_hash_table_unref);
-
-      g_signal_connect (cursor_tracker, "cursor-prefs-changed",
-                        G_CALLBACK (on_prefs_changed),
-                        cache);
-    }
-
-  return cache;
-}
 
 const char *
 meta_cursor_get_name (ClutterCursorType cursor)
@@ -555,68 +515,6 @@ meta_cursor_xcursor_prepare_at (ClutterCursor *cursor,
           clutter_cursor_reset_viewport_dst_size (cursor);
         }
     }
-}
-
-static ClutterColorState *
-ensure_xcursor_color_state (MetaCursorTracker *cursor_tracker)
-{
-  ClutterColorState *color_state;
-  static GOnce quark_once = G_ONCE_INIT;
-
-  g_once (&quark_once, (GThreadFunc) g_quark_from_static_string,
-          (gpointer) "-meta-cursor-xcursor-color-state");
-
-  color_state = g_object_get_qdata (G_OBJECT (cursor_tracker),
-                                    GPOINTER_TO_INT (quark_once.retval));
-  if (!color_state)
-    {
-      MetaBackend *backend =
-        meta_cursor_tracker_get_backend (cursor_tracker);
-      ClutterContext *clutter_context =
-        meta_backend_get_clutter_context (backend);
-      ClutterColorManager *color_manager =
-        clutter_context_get_color_manager (clutter_context);
-
-      color_state = clutter_color_manager_get_default_color_state (color_manager);
-
-      g_object_set_qdata_full (G_OBJECT (cursor_tracker),
-                               GPOINTER_TO_INT (quark_once.retval),
-                               g_object_ref (color_state),
-                               g_object_unref);
-    }
-
-  return color_state;
-}
-
-MetaCursorXcursor *
-meta_cursor_xcursor_get (ClutterCursorType  cursor_type,
-                         MetaCursorTracker *cursor_tracker)
-{
-  MetaBackend *backend =
-    meta_cursor_tracker_get_backend (cursor_tracker);
-  MetaCursorXcursor *cursor_xcursor;
-  ClutterColorState *color_state;
-  GHashTable *cache;
-
-  cache = ensure_cache (cursor_tracker);
-
-  cursor_xcursor = g_hash_table_lookup (cache, GUINT_TO_POINTER (cursor_type));
-
-  if (!cursor_xcursor)
-    {
-      color_state = ensure_xcursor_color_state (cursor_tracker);
-
-      cursor_xcursor = g_object_new (META_TYPE_CURSOR_XCURSOR,
-                                     "color-state", color_state,
-                                     "cursor-type", cursor_type,
-                                     "backend", backend,
-                                     NULL);
-
-      g_hash_table_insert (cache, GUINT_TO_POINTER (cursor_type),
-                           cursor_xcursor);
-    }
-
-  return g_object_ref (cursor_xcursor);
 }
 
 static CoglTexture *
