@@ -38,3 +38,9 @@ G_DECLARE_DERIVABLE_TYPE (MetaCursor, meta_cursor, META, CURSOR, ClutterCursor)
 
 META_EXPORT
 MetaBackend * meta_cursor_get_backend (MetaCursor *cursor);
+
+META_EXPORT
+const char * meta_cursor_get_theme_name (MetaCursor *cursor);
+
+META_EXPORT
+unsigned int meta_cursor_get_size (MetaCursor *cursor);

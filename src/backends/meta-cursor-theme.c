@@ -153,6 +153,8 @@ meta_cursor_theme_get_cursor (MetaCursorTheme   *cursor_theme,
                                  "color-state", cursor_theme->color_state,
                                  "cursor-type", cursor_type,
                                  "backend", cursor_theme->backend,
+                                 "theme-name", meta_prefs_get_cursor_theme (),
+                                 "size", meta_prefs_get_cursor_size (),
                                  NULL);
 
           g_assert (cursor != NULL);

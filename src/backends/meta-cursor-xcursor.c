@@ -246,9 +246,11 @@ create_blank_cursor_images (void)
 }
 
 static XcursorImages *
-load_cursor_on_client (ClutterCursorType cursor,
-                       int               scale)
+load_cursor_on_client (MetaCursorXcursor *cursor_xcursor,
+                       ClutterCursorType  cursor,
+                       int                scale)
 {
+  MetaCursor *meta_cursor = META_CURSOR (cursor_xcursor);
   XcursorImages *xcursor_images;
   int fallback_size, i;
   const char *cursor_names[2];
@@ -263,8 +265,8 @@ load_cursor_on_client (ClutterCursorType cursor,
     {
       xcursor_images =
         xcursor_library_load_images (cursor_names[i],
-                                     meta_prefs_get_cursor_theme (),
-                                     meta_prefs_get_cursor_size () * scale);
+                                     meta_cursor_get_theme_name (meta_cursor),
+                                     meta_cursor_get_size (meta_cursor) * scale);
       if (xcursor_images)
         return xcursor_images;
     }
@@ -352,7 +354,7 @@ meta_cursor_xcursor_get_scaled_image_size (MetaCursorXcursor *cursor_xcursor,
   float effective_theme_scale;
 
   current_image = meta_cursor_xcursor_get_current_image (cursor_xcursor);
-  theme_size = meta_prefs_get_cursor_size ();
+  theme_size = meta_cursor_get_size (META_CURSOR (cursor_xcursor));
   image_size = current_image->size;
   effective_theme_scale = (float) theme_size / image_size;
 
@@ -430,7 +432,8 @@ load_cursor_from_theme (MetaCursorXcursor *cursor_xcursor)
 
       new_cursor.scale = cursor_xcursor->theme_scale;
       new_cursor.xcursor_images =
-        load_cursor_on_client (cursor_type,
+        load_cursor_on_client (cursor_xcursor,
+                               cursor_type,
                                new_cursor.scale);
 
       xcursor_images = new_cursor.xcursor_images;
