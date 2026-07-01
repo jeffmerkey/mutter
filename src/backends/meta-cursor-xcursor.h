@@ -22,12 +22,13 @@
 
 #include "clutter/clutter.h"
 #include "core/util-private.h"
+#include "meta/meta-cursor.h"
 #include "meta/types.h"
 #include "third_party/xcursor/xcursor.h"
 
 #define META_TYPE_CURSOR_XCURSOR meta_cursor_xcursor_get_type ()
 G_DECLARE_FINAL_TYPE (MetaCursorXcursor, meta_cursor_xcursor,
-                      META, CURSOR_XCURSOR, ClutterCursor)
+                      META, CURSOR_XCURSOR, MetaCursor)
 
 MetaCursorXcursor * meta_cursor_xcursor_get (ClutterCursorType  cursor_type,
                                              MetaCursorTracker *cursor_tracker);

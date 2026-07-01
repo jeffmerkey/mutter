@@ -39,7 +39,6 @@ struct _MetaCursorXcursor
 {
   ClutterCursor parent;
 
-  MetaCursorTracker *cursor_tracker;
   CoglTexture *texture;
   int hot_x;
   int hot_y;
@@ -56,7 +55,7 @@ struct _MetaCursorXcursor
 };
 
 G_DEFINE_TYPE (MetaCursorXcursor, meta_cursor_xcursor,
-               CLUTTER_TYPE_CURSOR)
+               META_TYPE_CURSOR)
 
 static void
 on_prefs_changed (ClutterCursor *cursor,
@@ -323,9 +322,7 @@ load_cursor_on_client (ClutterCursorType cursor,
 static void
 load_from_current_xcursor_image (MetaCursorXcursor *cursor_xcursor)
 {
-  MetaCursorTracker *cursor_tracker = cursor_xcursor->cursor_tracker;
-  MetaBackend *backend =
-    meta_cursor_tracker_get_backend (cursor_tracker);
+  MetaBackend *backend = meta_cursor_get_backend (META_CURSOR (cursor_xcursor));
   XcursorImage *xc_image;
   int width, height, rowstride;
   CoglPixelFormat cogl_format;
@@ -517,9 +514,7 @@ meta_cursor_xcursor_prepare_at (ClutterCursor *cursor,
                                 int            y)
 {
   MetaCursorXcursor *cursor_xcursor = META_CURSOR_XCURSOR (cursor);
-  MetaCursorTracker *cursor_tracker = cursor_xcursor->cursor_tracker;
-  MetaBackend *backend =
-    meta_cursor_tracker_get_backend (cursor_tracker);
+  MetaBackend *backend = meta_cursor_get_backend (META_CURSOR (cursor));
 
   if (meta_backend_is_stage_views_scaled (backend))
     {
@@ -597,6 +592,8 @@ MetaCursorXcursor *
 meta_cursor_xcursor_get (ClutterCursorType  cursor_type,
                          MetaCursorTracker *cursor_tracker)
 {
+  MetaBackend *backend =
+    meta_cursor_tracker_get_backend (cursor_tracker);
   MetaCursorXcursor *cursor_xcursor;
   ClutterColorState *color_state;
   GHashTable *cache;
@@ -612,8 +609,8 @@ meta_cursor_xcursor_get (ClutterCursorType  cursor_type,
       cursor_xcursor = g_object_new (META_TYPE_CURSOR_XCURSOR,
                                      "color-state", color_state,
                                      "cursor-type", cursor_type,
+                                     "backend", backend,
                                      NULL);
-      cursor_xcursor->cursor_tracker = cursor_tracker;
 
       g_hash_table_insert (cache, GUINT_TO_POINTER (cursor_type),
                            cursor_xcursor);
