@@ -49,14 +49,6 @@ CLUTTER_EXPORT
 void clutter_cursor_reset_viewport_src_rect (ClutterCursor *cursor);
 
 CLUTTER_EXPORT
-void clutter_cursor_set_viewport_dst_size (ClutterCursor *cursor,
-                                           int            dst_width,
-                                           int            dst_height);
-
-CLUTTER_EXPORT
-void clutter_cursor_reset_viewport_dst_size (ClutterCursor *cursor);
-
-CLUTTER_EXPORT
 CoglTexture * clutter_cursor_get_texture (ClutterCursor *cursor,
                                           int           *hot_x,
                                           int           *hot_y);
@@ -86,6 +78,3 @@ unsigned int clutter_cursor_get_current_frame_time (ClutterCursor *cursor);
 
 CLUTTER_EXPORT
 ClutterColorState * clutter_cursor_get_color_state (ClutterCursor *cursor);
-
-CLUTTER_EXPORT
-void clutter_cursor_emit_texture_changed (ClutterCursor *cursor);

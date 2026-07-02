@@ -60,3 +60,14 @@ struct _ClutterCursorClass
 
 CLUTTER_EXPORT
 ClutterCursorType clutter_cursor_get_cursor_type (ClutterCursor *cursor);
+
+CLUTTER_EXPORT
+void clutter_cursor_emit_texture_changed (ClutterCursor *cursor);
+
+CLUTTER_EXPORT
+void clutter_cursor_set_viewport_dst_size (ClutterCursor *cursor,
+                                           int            dst_width,
+                                           int            dst_height);
+
+CLUTTER_EXPORT
+void clutter_cursor_reset_viewport_dst_size (ClutterCursor *cursor);
