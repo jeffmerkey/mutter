@@ -42,7 +42,4 @@ void meta_cursor_xcursor_get_scaled_image_size (MetaCursorXcursor *sprite_xcurso
                                                 int               *width,
                                                 int               *height);
 
-META_EXPORT_TEST
-const char * meta_cursor_get_name (ClutterCursorType cursor);
-
 const char * meta_cursor_get_legacy_name (ClutterCursorType cursor);

@@ -59,6 +59,9 @@ struct _ClutterCursorClass
 };
 
 CLUTTER_EXPORT
+const char * clutter_cursor_type_to_name (ClutterCursorType cursor);
+
+CLUTTER_EXPORT
 ClutterCursorType clutter_cursor_get_cursor_type (ClutterCursor *cursor);
 
 CLUTTER_EXPORT

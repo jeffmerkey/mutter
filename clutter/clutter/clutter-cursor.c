@@ -366,3 +366,89 @@ clutter_cursor_get_cursor_type (ClutterCursor *cursor)
 
   return priv->cursor_type;
 }
+
+const char *
+clutter_cursor_type_to_name (ClutterCursorType cursor)
+{
+  switch (cursor)
+    {
+    case CLUTTER_CURSOR_DEFAULT:
+      return "default";
+    case CLUTTER_CURSOR_CONTEXT_MENU:
+      return "context-menu";
+    case CLUTTER_CURSOR_HELP:
+      return "help";
+    case CLUTTER_CURSOR_POINTER:
+      return "pointer";
+    case CLUTTER_CURSOR_PROGRESS:
+      return "progress";
+    case CLUTTER_CURSOR_WAIT:
+      return "wait";
+    case CLUTTER_CURSOR_CELL:
+      return "cell";
+    case CLUTTER_CURSOR_CROSSHAIR:
+      return "crosshair";
+    case CLUTTER_CURSOR_TEXT:
+      return "text";
+    case CLUTTER_CURSOR_VERTICAL_TEXT:
+      return "vertical-text";
+    case CLUTTER_CURSOR_ALIAS:
+      return "alias";
+    case CLUTTER_CURSOR_COPY:
+      return "copy";
+    case CLUTTER_CURSOR_MOVE:
+      return "move";
+    case CLUTTER_CURSOR_NO_DROP:
+      return "no-drop";
+    case CLUTTER_CURSOR_NOT_ALLOWED:
+      return "not-allowed";
+    case CLUTTER_CURSOR_GRAB:
+      return "grab";
+    case CLUTTER_CURSOR_GRABBING:
+      return "grabbing";
+    case CLUTTER_CURSOR_E_RESIZE:
+      return "e-resize";
+    case CLUTTER_CURSOR_N_RESIZE:
+      return "n-resize";
+    case CLUTTER_CURSOR_NE_RESIZE:
+      return "ne-resize";
+    case CLUTTER_CURSOR_NW_RESIZE:
+      return "nw-resize";
+    case CLUTTER_CURSOR_S_RESIZE:
+      return "s-resize";
+    case CLUTTER_CURSOR_SE_RESIZE:
+      return "se-resize";
+    case CLUTTER_CURSOR_SW_RESIZE:
+      return "sw-resize";
+    case CLUTTER_CURSOR_W_RESIZE:
+      return "w-resize";
+    case CLUTTER_CURSOR_EW_RESIZE:
+      return "ew-resize";
+    case CLUTTER_CURSOR_NS_RESIZE:
+      return "ns-resize";
+    case CLUTTER_CURSOR_NESW_RESIZE:
+      return "nesw-resize";
+    case CLUTTER_CURSOR_NWSE_RESIZE:
+      return "nwse-resize";
+    case CLUTTER_CURSOR_COL_RESIZE:
+      return "col-resize";
+    case CLUTTER_CURSOR_ROW_RESIZE:
+      return "row-resize";
+    case CLUTTER_CURSOR_ALL_SCROLL:
+      return "all-scroll";
+    case CLUTTER_CURSOR_ZOOM_IN:
+      return "zoom-in";
+    case CLUTTER_CURSOR_ZOOM_OUT:
+      return "zoom-out";
+    case CLUTTER_CURSOR_DND_ASK:
+      return "dnd-ask";
+    case CLUTTER_CURSOR_ALL_RESIZE:
+      return "all-resize";
+    case CLUTTER_CURSOR_INHERIT:
+    case CLUTTER_CURSOR_NONE:
+      break;
+    }
+
+  g_assert_not_reached ();
+  return NULL;
+}

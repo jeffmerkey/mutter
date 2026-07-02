@@ -337,7 +337,7 @@ test_client_cursor (ClutterStageView    *view,
 
   g_debug ("Testing cursor with client using %s", scale_method);
 
-  cursor_name = meta_cursor_get_name (cursor);
+  cursor_name = clutter_cursor_type_to_name (cursor);
   transform_name = mtk_monitor_transform_to_string (transform);
   test_client =
     meta_wayland_test_client_new_with_args (test_context,

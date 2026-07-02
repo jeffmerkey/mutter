@@ -1586,7 +1586,7 @@ meta_x11_display_reload_cursor (MetaX11Display *x11_display)
   Cursor xcursor;
   /* Set a cursor for X11 applications that don't specify their own */
   xcursor = XcursorLibraryLoadCursor (x11_display->xdisplay,
-                                      meta_cursor_get_name (CLUTTER_CURSOR_DEFAULT));
+                                      clutter_cursor_type_to_name (CLUTTER_CURSOR_DEFAULT));
   if (!xcursor)
     {
       xcursor = XcursorLibraryLoadCursor (x11_display->xdisplay,
