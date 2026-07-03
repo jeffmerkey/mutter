@@ -24,8 +24,8 @@
 CLUTTER_EXPORT
 void clutter_cursor_prepare_at (ClutterCursor *cursor,
                                 float          best_scale,
-                                int            x,
-                                int            y);
+                                float          x,
+                                float          y);
 
 CLUTTER_EXPORT
 void clutter_cursor_invalidate (ClutterCursor *cursor);

@@ -241,8 +241,8 @@ clutter_cursor_get_viewport_dst_size (ClutterCursor *cursor,
 void
 clutter_cursor_prepare_at (ClutterCursor   *cursor,
                            float            best_scale,
-                           int              x,
-                           int              y)
+                           float            x,
+                           float            y)
 {
   ClutterCursorClass *cursor_class = CLUTTER_CURSOR_GET_CLASS (cursor);
 

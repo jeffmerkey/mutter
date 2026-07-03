@@ -78,8 +78,8 @@ meta_cursor_wayland_invalidate (ClutterCursor *cursor)
 static void
 meta_cursor_wayland_prepare_at (ClutterCursor *cursor,
                                 float          best_scale,
-                                int            x,
-                                int            y)
+                                float          x,
+                                float          y)
 {
   MetaCursorWayland *cursor_wayland = META_CURSOR_WAYLAND (cursor);
   MetaCursorTracker *cursor_tracker = cursor_wayland->cursor_tracker;

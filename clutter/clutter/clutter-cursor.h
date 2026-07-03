@@ -54,8 +54,8 @@ struct _ClutterCursorClass
 
   void (* prepare_at) (ClutterCursor *cursor,
                        float          best_scale,
-                       int            x,
-                       int            y);
+                       float          x,
+                       float          y);
 };
 
 CLUTTER_EXPORT

@@ -491,8 +491,8 @@ meta_cursor_renderer_update_cursor (MetaCursorRenderer *renderer,
       float scale = find_highest_logical_monitor_scale (renderer, cursor);
       clutter_cursor_prepare_at (cursor,
                                  MAX (1, scale),
-                                 (int) priv->current_x,
-                                 (int) priv->current_y);
+                                 priv->current_x,
+                                 priv->current_y);
     }
 
   priv->needs_overlay =

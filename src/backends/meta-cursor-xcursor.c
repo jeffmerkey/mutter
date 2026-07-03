@@ -389,8 +389,8 @@ meta_cursor_xcursor_invalidate (ClutterCursor *cursor)
 static void
 meta_cursor_xcursor_prepare_at (ClutterCursor *cursor,
                                 float          best_scale,
-                                int            x,
-                                int            y)
+                                float          x,
+                                float          y)
 {
   MetaCursorXcursor *cursor_xcursor = META_CURSOR_XCURSOR (cursor);
   MetaBackend *backend = meta_cursor_get_backend (META_CURSOR (cursor));
