@@ -35,6 +35,7 @@
 #include "meta/barrier.h"
 #include "meta/boxes.h"
 #include "meta/meta-backend.h"
+#include "meta/meta-cursor-tracker.h"
 #include "mtk/mtk.h"
 
 #include "meta-dbus-input-capture.h"
@@ -458,6 +459,10 @@ on_barrier_hit (MetaBarrier             *barrier,
     META_DBUS_INPUT_CAPTURE_SESSION (session);
   MetaInputCapture *input_capture =
     META_INPUT_CAPTURE (session->session_manager);
+  MetaBackend *backend =
+    meta_dbus_session_manager_get_backend (session->session_manager);
+  MetaCursorTracker *cursor_tracker =
+    meta_backend_get_cursor_tracker (backend);
   GVariant *cursor_position;
   unsigned int barrier_id;
 
@@ -480,6 +485,8 @@ on_barrier_hit (MetaBarrier             *barrier,
   cursor_position = g_variant_new ("(dd)", event->x, event->y);
 
   meta_input_capture_activate (input_capture, session);
+
+  meta_cursor_tracker_inhibit_cursor_visibility (cursor_tracker);
 
   meta_dbus_input_capture_session_emit_activated (skeleton,
                                                   barrier_id,
@@ -579,8 +586,14 @@ meta_input_capture_session_deactivate (MetaInputCaptureSession *session)
     META_DBUS_INPUT_CAPTURE_SESSION (session);
   MetaInputCapture *input_capture =
     META_INPUT_CAPTURE (session->session_manager);
+  MetaBackend *backend =
+    meta_dbus_session_manager_get_backend (session->session_manager);
+  MetaCursorTracker *cursor_tracker =
+    meta_backend_get_cursor_tracker (backend);
 
   meta_input_capture_deactivate (input_capture, session);
+
+  meta_cursor_tracker_uninhibit_cursor_visibility (cursor_tracker);
 
   if (session->eis_pointer)
     eis_device_stop_emulating (session->eis_pointer);
