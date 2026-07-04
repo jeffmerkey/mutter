@@ -180,7 +180,7 @@ struct _ClutterActorBox
 #define CLUTTER_ACTOR_BOX_UNINITIALIZED { .x1 = INFINITY, .y1 = INFINITY, .x2 = -INFINITY, .y2 = -INFINITY }
 
 CLUTTER_EXPORT
-GType            clutter_actor_box_get_type      (void) G_GNUC_CONST;
+GType            clutter_actor_box_get_type      (void);
 CLUTTER_EXPORT
 ClutterActorBox *clutter_actor_box_new           (gfloat                 x_1,
                                                   gfloat                 y_1,
@@ -267,7 +267,7 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC (ClutterActorBox, clutter_actor_box_free)
  */
 
 CLUTTER_EXPORT
-GType clutter_paint_volume_get_type (void) G_GNUC_CONST;
+GType clutter_paint_volume_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintVolume *clutter_paint_volume_copy                (const ClutterPaintVolume *pv);
@@ -331,7 +331,7 @@ struct _ClutterMargin
 };
 
 CLUTTER_EXPORT
-GType clutter_margin_get_type (void) G_GNUC_CONST;
+GType clutter_margin_get_type (void);
 
 CLUTTER_EXPORT
 ClutterMargin * clutter_margin_new      (void) G_GNUC_MALLOC;

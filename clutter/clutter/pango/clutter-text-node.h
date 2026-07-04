@@ -42,7 +42,7 @@ typedef struct _ClutterTextNode ClutterTextNode;
 typedef struct _ClutterTextNodeClass ClutterTextNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_text_node_get_type (void) G_GNUC_CONST;
+GType clutter_text_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode * clutter_text_node_new (PangoLayout     *layout,

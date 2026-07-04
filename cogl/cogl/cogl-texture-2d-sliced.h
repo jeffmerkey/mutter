@@ -79,7 +79,7 @@ typedef struct _CoglTexture2DSlicedClass CoglTexture2DSlicedClass;
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (CoglTexture2DSliced, g_object_unref)
 
 COGL_EXPORT
-GType               cogl_texture_2d_sliced_get_type       (void) G_GNUC_CONST;
+GType               cogl_texture_2d_sliced_get_type       (void);
 
 /**
  * cogl_texture_2d_sliced_new_with_size:

@@ -76,7 +76,7 @@ typedef struct _CoglAtlasTextureClass CoglAtlasTextureClass;
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (CoglAtlasTexture, g_object_unref)
 
 COGL_EXPORT
-GType               cogl_atlas_texture_get_type       (void) G_GNUC_CONST;
+GType               cogl_atlas_texture_get_type       (void);
 
 /**
  * cogl_atlas_texture_new_with_size:

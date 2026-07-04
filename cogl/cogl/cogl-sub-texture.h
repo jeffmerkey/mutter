@@ -59,7 +59,7 @@ typedef struct _CoglSubTextureClass CoglSubTextureClass;
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (CoglSubTexture, g_object_unref)
 
 COGL_EXPORT
-GType               cogl_sub_texture_get_type       (void) G_GNUC_CONST;
+GType               cogl_sub_texture_get_type       (void);
 /**
  * cogl_sub_texture_new:
  * @ctx: A #CoglContext pointer

@@ -26,7 +26,7 @@ typedef struct _MetaKeymapDescription MetaKeymapDescription;
 #define META_TYPE_KEYMAP_DESCRIPTION (meta_keymap_description_get_type ())
 
 META_EXPORT
-GType meta_keymap_description_get_type (void) G_GNUC_CONST;
+GType meta_keymap_description_get_type (void);
 
 META_EXPORT
 MetaKeymapDescription * meta_keymap_description_new_from_rules (const char *model,

@@ -129,10 +129,10 @@ typedef gboolean (* ClutterEventFilterFunc) (const ClutterEvent *event,
                                              gpointer            user_data);
 
 CLUTTER_EXPORT
-GType clutter_event_get_type (void) G_GNUC_CONST;
+GType clutter_event_get_type (void);
 
 CLUTTER_EXPORT
-GType clutter_event_sequence_get_type (void) G_GNUC_CONST;
+GType clutter_event_sequence_get_type (void);
 
 CLUTTER_EXPORT
 gboolean                clutter_events_pending                  (void);

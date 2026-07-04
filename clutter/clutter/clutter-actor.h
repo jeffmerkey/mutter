@@ -267,7 +267,7 @@ struct _ClutterActorIter
 };
 
 CLUTTER_EXPORT
-GType clutter_actor_get_type (void) G_GNUC_CONST;
+GType clutter_actor_get_type (void);
 
 CLUTTER_EXPORT
 ClutterActor *                  clutter_actor_new                               (void);

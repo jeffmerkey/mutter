@@ -29,7 +29,7 @@ typedef struct
   gboolean was_painted;
 } Data;
 
-GType foo_actor_get_type (void) G_GNUC_CONST;
+GType foo_actor_get_type (void);
 
 G_DEFINE_TYPE (FooActor, foo_actor, CLUTTER_TYPE_ACTOR);
 

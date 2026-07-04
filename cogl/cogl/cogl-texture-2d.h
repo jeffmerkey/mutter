@@ -66,7 +66,7 @@ typedef struct _CoglTexture2DClass CoglTexture2DClass;
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (CoglTexture2D, g_object_unref)
 
 COGL_EXPORT
-GType               cogl_texture_2d_get_type       (void) G_GNUC_CONST;
+GType               cogl_texture_2d_get_type       (void);
 
 typedef enum _CoglEglImageFlags
 {

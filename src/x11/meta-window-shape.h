@@ -26,7 +26,7 @@
 
 #include "meta/common.h"
 
-GType meta_window_shape_get_type (void) G_GNUC_CONST;
+GType meta_window_shape_get_type (void);
 
 /**
  * MetaWindowShape:

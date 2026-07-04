@@ -81,7 +81,7 @@ typedef struct _MetaDisplayClass MetaDisplayClass;
 #define META_DISPLAY_GET_CLASS(obj)    (G_TYPE_INSTANCE_GET_CLASS ((obj), META_TYPE_DISPLAY, MetaDisplayClass))
 
 META_EXPORT
-GType meta_display_get_type (void) G_GNUC_CONST;
+GType meta_display_get_type (void);
 
 META_EXPORT
 void meta_display_close (MetaDisplay *display,

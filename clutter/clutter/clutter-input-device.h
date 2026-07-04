@@ -66,7 +66,7 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC (ClutterInputDevice, g_object_unref)
 typedef struct _ClutterInputDeviceClass ClutterInputDeviceClass;
 
 CLUTTER_EXPORT
-GType clutter_input_device_get_type (void) G_GNUC_CONST;
+GType clutter_input_device_get_type (void);
 
 CLUTTER_EXPORT
 ClutterInputDeviceType  clutter_input_device_get_device_type    (ClutterInputDevice  *device);

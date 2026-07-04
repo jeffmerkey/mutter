@@ -58,7 +58,7 @@ struct _MetaStageImplClass
   ClutterStageWindowClass parent_class;
 };
 
-GType meta_stage_impl_get_type (void) G_GNUC_CONST;
+GType meta_stage_impl_get_type (void);
 
 MetaBackend * meta_stage_impl_get_backend (MetaStageImpl *stage_impl);
 

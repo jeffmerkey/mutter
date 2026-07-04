@@ -44,7 +44,7 @@ typedef struct _ClutterBackend          ClutterBackend;
 typedef struct _ClutterBackendClass     ClutterBackendClass;
 
 CLUTTER_EXPORT
-GType clutter_backend_get_type (void) G_GNUC_CONST;
+GType clutter_backend_get_type (void);
 
 CLUTTER_EXPORT
 ClutterBackend *                clutter_get_default_backend             (void);

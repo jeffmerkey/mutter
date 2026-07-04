@@ -133,7 +133,7 @@ struct _ClutterFrameInfo
 };
 
 CLUTTER_EXPORT
-GType clutter_perspective_get_type (void) G_GNUC_CONST;
+GType clutter_perspective_get_type (void);
 
 CLUTTER_EXPORT
 void            clutter_stage_get_perspective                   (ClutterStage          *stage,

@@ -76,7 +76,7 @@ typedef struct _CoglBufferClass CoglBufferClass;
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (CoglBuffer, g_object_unref)
 
 COGL_EXPORT
-GType       cogl_buffer_get_type (void) G_GNUC_CONST;
+GType       cogl_buffer_get_type (void);
 
 /**
  * cogl_buffer_get_size:

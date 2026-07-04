@@ -28,7 +28,7 @@ G_BEGIN_DECLS
 
 typedef struct _ClutterPickStack ClutterPickStack;
 
-GType clutter_pick_stack_get_type (void) G_GNUC_CONST;
+GType clutter_pick_stack_get_type (void);
 
 ClutterPickStack * clutter_pick_stack_new (CoglContext *context);
 

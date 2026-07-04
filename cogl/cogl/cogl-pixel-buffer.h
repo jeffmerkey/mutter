@@ -61,7 +61,7 @@ typedef struct _CoglPixelBufferClass CoglPixelBufferClass;
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (CoglPixelBuffer, g_object_unref)
 
 COGL_EXPORT
-GType               cogl_pixel_buffer_get_type       (void) G_GNUC_CONST;
+GType               cogl_pixel_buffer_get_type       (void);
 
 /**
  * cogl_pixel_buffer_new:

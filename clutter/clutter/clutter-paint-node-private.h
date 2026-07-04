@@ -97,7 +97,7 @@ struct _ClutterPaintOperation
   } op;
 };
 
-GType _clutter_dummy_node_get_type (void) G_GNUC_CONST;
+GType _clutter_dummy_node_get_type (void);
 
 void                    clutter_paint_node_init_types                   (ClutterBackend *clutter_backend);
 gpointer                _clutter_paint_node_create                      (GType gtype);
@@ -132,7 +132,7 @@ typedef struct _ClutterEffectNode ClutterEffectNode;
 typedef struct _ClutterEffectNode ClutterEffectNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_effect_node_get_type (void) G_GNUC_CONST;
+GType clutter_effect_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode * clutter_effect_node_new (ClutterEffect *effect);

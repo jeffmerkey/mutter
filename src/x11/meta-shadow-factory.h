@@ -26,7 +26,7 @@
 #include "cogl/cogl.h"
 #include "x11/meta-window-shape.h"
 
-GType meta_shadow_get_type (void) G_GNUC_CONST;
+GType meta_shadow_get_type (void);
 
 /**
  * MetaShadowParams:

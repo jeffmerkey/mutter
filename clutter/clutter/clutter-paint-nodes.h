@@ -41,7 +41,7 @@ typedef struct _ClutterColorNode                ClutterColorNode;
 typedef struct _ClutterColorNodeClass           ClutterColorNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_color_node_get_type (void) G_GNUC_CONST;
+GType clutter_color_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode *      clutter_color_node_new          (const CoglColor    *color);
@@ -54,7 +54,7 @@ typedef struct _ClutterTextureNode              ClutterTextureNode;
 typedef struct _ClutterTextureNodeClass         ClutterTextureNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_texture_node_get_type (void) G_GNUC_CONST;
+GType clutter_texture_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode *      clutter_texture_node_new        (CoglTexture           *texture,
@@ -70,7 +70,7 @@ typedef struct _ClutterClipNode                 ClutterClipNode;
 typedef struct _ClutterClipNodeClass            ClutterClipNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_clip_node_get_type (void) G_GNUC_CONST;
+GType clutter_clip_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode *      clutter_clip_node_new           (void);
@@ -83,7 +83,7 @@ typedef struct _ClutterPipelineNode             ClutterPipelineNode;
 typedef struct _ClutterPipelineNodeClass        ClutterPipelineNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_pipeline_node_get_type (void) G_GNUC_CONST;
+GType clutter_pipeline_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode *      clutter_pipeline_node_new       (CoglPipeline          *pipeline);
@@ -96,7 +96,7 @@ typedef struct _ClutterActorNode ClutterActorNode;
 typedef struct _ClutterActorNode ClutterActorNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_actor_node_get_type (void) G_GNUC_CONST;
+GType clutter_actor_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode * clutter_actor_node_new (ClutterActor *actor,
@@ -110,7 +110,7 @@ typedef struct _ClutterRootNode                 ClutterRootNode;
 typedef struct _ClutterPaintNodeClass           ClutterRootNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_root_node_get_type (void) G_GNUC_CONST;
+GType clutter_root_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode *      clutter_root_node_new           (CoglFramebuffer       *framebuffer,
@@ -126,7 +126,7 @@ typedef struct _ClutterLayerNode                ClutterLayerNode;
 typedef struct _ClutterLayerNodeClass           ClutterLayerNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_layer_node_get_type (void) G_GNUC_CONST;
+GType clutter_layer_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode * clutter_layer_node_new_to_framebuffer (CoglFramebuffer *framebuffer,
@@ -141,7 +141,7 @@ typedef struct _ClutterTransformNode            ClutterTransformNode;
 typedef struct _ClutterPaintNodeClass           ClutterTransformNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_transform_node_get_type (void) G_GNUC_CONST;
+GType clutter_transform_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode *      clutter_transform_node_new          (const graphene_matrix_t *projection);
@@ -154,7 +154,7 @@ typedef struct _ClutterBlitNode                 ClutterBlitNode;
 typedef struct _ClutterPaintNodeClass           ClutterBlitNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_blit_node_get_type (void) G_GNUC_CONST;
+GType clutter_blit_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode * clutter_blit_node_new (CoglFramebuffer *src);
@@ -176,7 +176,7 @@ typedef struct _ClutterBlurNode                 ClutterBlurNode;
 typedef struct _ClutterLayerNodeClass           ClutterBlurNodeClass;
 
 CLUTTER_EXPORT
-GType clutter_blur_node_get_type (void) G_GNUC_CONST;
+GType clutter_blur_node_get_type (void);
 
 CLUTTER_EXPORT
 ClutterPaintNode * clutter_blur_node_new (unsigned int width,

@@ -106,7 +106,7 @@ struct _MetaInputDeviceNativeClass
   ClutterInputDeviceClass parent_class;
 };
 
-GType                     meta_input_device_native_get_type        (void) G_GNUC_CONST;
+GType                     meta_input_device_native_get_type        (void);
 
 ClutterInputDevice *      meta_input_device_native_new_in_impl     (MetaSeatImpl            *seat_impl,
                                                                     struct libinput_device  *libinput_device);

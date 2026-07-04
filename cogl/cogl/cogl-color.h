@@ -342,7 +342,7 @@ COGL_EXPORT
 const CoglColor * cogl_value_get_color (const GValue *value);
 
 COGL_EXPORT
-GType cogl_param_color_get_type (void) G_GNUC_CONST;
+GType cogl_param_color_get_type (void);
 
 
 /**
