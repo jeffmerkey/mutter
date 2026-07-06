@@ -27,10 +27,4 @@
 
 #include "xwayland-keyboard-grab-unstable-v1-server-protocol.h"
 
-#define META_TYPE_XWAYLAND_KEYBOARD_ACTIVE_GRAB (meta_xwayland_keyboard_active_grab_get_type ())
-G_DECLARE_FINAL_TYPE (MetaXwaylandKeyboardActiveGrab,
-                      meta_xwayland_keyboard_active_grab,
-                      META, XWAYLAND_KEYBOARD_ACTIVE_GRAB,
-                      GObject);
-
 gboolean meta_xwayland_grab_keyboard_init (MetaWaylandCompositor *compositor);

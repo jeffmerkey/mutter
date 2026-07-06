@@ -31,7 +31,7 @@
 #include "wayland/meta-window-wayland.h"
 #include "wayland/meta-xwayland-grab-keyboard.h"
 
-struct _MetaXwaylandKeyboardActiveGrab
+typedef struct _MetaXwaylandKeyboardActiveGrab
 {
   MetaWaylandSurface *surface;
   MetaWaylandSeat *seat;
@@ -40,7 +40,7 @@ struct _MetaXwaylandKeyboardActiveGrab
   gulong shortcuts_restored_handler;
   gulong window_associate_handler;
   struct wl_resource *resource;
-};
+} MetaXwaylandKeyboardActiveGrab;
 
 static void
 meta_xwayland_keyboard_grab_end (MetaXwaylandKeyboardActiveGrab *active_grab)
