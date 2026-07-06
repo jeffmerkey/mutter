@@ -150,3 +150,11 @@ then
      --commit 577dd63bf237e3a86134057cb647e21876609cf7 \
      master
 fi
+
+if ! check_gsettings_key org.gnome.desktop.peripherals.mouse scroll-wheel-emulation-button
+then
+  ./$SCRIPTS_DIR/install-meson-project.sh \
+      "${OPTIONS[@]}" \
+      https://gitlab.gnome.org/GNOME/gsettings-desktop-schemas \
+      51.alpha
+fi
