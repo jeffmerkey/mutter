@@ -109,12 +109,14 @@ is_cursor_in_stream (MetaStreamSourceArea *source_area)
     meta_backend_get_cursor_renderer (backend);
   MtkRectangle area;
   graphene_rect_t area_rect;
-  ClutterCursor *cursor;
+  ClutterCursor *cursor = NULL;
 
   meta_stream_area_get_area (area_stream, &area);
   area_rect = mtk_rectangle_to_graphene_rect (&area);
 
-  cursor = meta_cursor_renderer_get_cursor (cursor_renderer);
+  if (cursor_renderer)
+    cursor = meta_cursor_renderer_get_cursor (cursor_renderer);
+
   if (cursor)
     {
       graphene_rect_t cursor_rect;
@@ -627,10 +629,17 @@ meta_stream_source_area_set_cursor_metadata (MetaStreamSource       *source,
   MetaStream *stream = meta_stream_source_get_stream (source);
   MetaStreamArea *area_stream = META_STREAM_AREA (stream);
   MetaBackend *backend = get_backend (source_area);
-  MetaCursorRenderer *cursor_renderer =
-    meta_backend_get_cursor_renderer (backend);
+  MetaCursorRenderer *cursor_renderer;
   ClutterCursor *cursor;
   int x, y;
+
+  cursor_renderer = meta_backend_get_cursor_renderer (backend);
+  if (!cursor_renderer)
+    {
+      source_area->last_cursor_matadata.set = FALSE;
+      meta_stream_source_unset_cursor_metadata (source, spa_meta_cursor);
+      return;
+    }
 
   cursor = meta_cursor_renderer_get_cursor (cursor_renderer);
 
