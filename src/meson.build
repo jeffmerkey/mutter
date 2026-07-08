@@ -162,6 +162,8 @@ mutter_sources = [
   'backends/meta-color-profile.h',
   'backends/meta-color-store.c',
   'backends/meta-color-store.h',
+  'backends/meta-clipboard-session.c',
+  'backends/meta-clipboard-session.h',
   'backends/meta-connector.c',
   'backends/meta-connector.h',
   'backends/meta-crtc-mode.c',
@@ -449,8 +451,6 @@ endif
 
 if have_remote_desktop
   mutter_sources += [
-    'backends/meta-clipboard-session.c',
-    'backends/meta-clipboard-session.h',
     'backends/meta-eis.c',
     'backends/meta-eis.h',
     'backends/meta-eis-client.c',
@@ -864,6 +864,11 @@ dbus_interfaces = [
     'prefix': 'org.freedesktop.a11y',
   },
   {
+    'name': 'meta-dbus-clipboard',
+    'interface': 'org.gnome.Mutter.Clipboard.xml',
+    'prefix': 'org.gnome.Mutter.',
+  },
+  {
     'name': 'meta-dbus-display-config',
     'interface': 'org.gnome.Mutter.DisplayConfig.xml',
     'prefix': 'org.gnome.Mutter.',
@@ -946,11 +951,6 @@ if have_remote_desktop
     {
       'name': 'meta-dbus-screen-cast',
       'interface': 'org.gnome.Mutter.ScreenCast.xml',
-      'prefix': 'org.gnome.Mutter.',
-    },
-    {
-      'name': 'meta-dbus-clipboard',
-      'interface': 'org.gnome.Mutter.Clipboard.xml',
       'prefix': 'org.gnome.Mutter.',
     },
   ]
