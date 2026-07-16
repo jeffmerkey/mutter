@@ -84,4 +84,8 @@ gboolean meta_external_constraint_constrain (MetaExternalConstraint     *constra
                                              MetaWindow                 *window,
                                              MetaExternalConstraintInfo *info);
 
+META_EXPORT
+void meta_external_constraint_info_set_rect (MetaExternalConstraintInfo *info,
+                                             const MtkRectangle         *rect);
+
 G_END_DECLS

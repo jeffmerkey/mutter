@@ -56,3 +56,21 @@ meta_external_constraint_constrain (MetaExternalConstraint     *constraint,
 
   return TRUE;
 }
+
+/**
+ * meta_external_constraint_info_set_rect:
+ * @info: a #MetaExternalConstraintInfo
+ * @rect: the new window rectangle
+ *
+ * Sets the proposed window rectangle carried by @info.
+ */
+void
+meta_external_constraint_info_set_rect (MetaExternalConstraintInfo *info,
+                                        const MtkRectangle         *rect)
+{
+  g_return_if_fail (info != NULL);
+  g_return_if_fail (info->new_rect != NULL);
+  g_return_if_fail (rect != NULL);
+
+  *info->new_rect = *rect;
+}
