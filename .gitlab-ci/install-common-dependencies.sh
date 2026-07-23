@@ -151,7 +151,7 @@ then
      master
 fi
 
-if ! check_gsettings_key org.gnome.desktop.peripherals.mouse scroll-wheel-emulation-button
+if ! check_gsettings_key org.gnome.desktop.a11y.interface keyboard-focus-visible-timeout
 then
   ./$SCRIPTS_DIR/install-meson-project.sh \
       "${OPTIONS[@]}" \
