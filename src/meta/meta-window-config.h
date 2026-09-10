@@ -70,3 +70,14 @@ void meta_window_config_set_is_fullscreen (MetaWindowConfig *window_config,
 
 META_EXPORT
 gboolean meta_window_config_get_is_fullscreen (MetaWindowConfig *window_config);
+
+META_EXPORT
+MetaMaximizeFlags meta_window_config_get_maximize_flags (MetaWindowConfig *config);
+
+META_EXPORT
+void meta_window_config_set_maximize_flags (MetaWindowConfig  *config,
+                                            MetaMaximizeFlags  flags);
+
+META_EXPORT
+void meta_window_config_unset_maximize_flags (MetaWindowConfig  *config,
+                                              MetaMaximizeFlags  flags);
