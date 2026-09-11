@@ -46,7 +46,7 @@ gudev_req = '>= 238'
 umockdev_req = '>= 0.3.0'
 
 # wayland version requirements
-wayland_server_req = '>= 1.24'
+wayland_server_req = '>= 1.26'
 wayland_protocols_req = '>= 1.48'
 
 # native backend version requirements
